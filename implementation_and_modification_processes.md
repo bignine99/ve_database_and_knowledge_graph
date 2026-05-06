@@ -27,7 +27,7 @@
 16. [Phase 16: CUBE 온톨로지 보강](#phase-16)
 17. [Phase 17: Flask 종합 대시보드](#phase-17)
 18. [Phase 18: Git 배포 준비](#phase-18)
-19. [향후 작업: Amazon Lightsail 배포](#next-lightsail)
+19. [Phase 19: Amazon Lightsail 프로덕션 배포](#next-lightsail)
 20. [최종 데이터베이스 현황](#final-status)
 21. [기술적 교훈 및 시행착오 기록](#lessons-learned)
 
@@ -466,67 +466,72 @@ y~714: 장점/단점/고려사항 (x좌표로 구분)
 
 ---
 
-## 향후 작업: Amazon Lightsail 프로덕션 배포 <a id="next-lightsail"></a>
+## Phase 19: Amazon Lightsail 프로덕션 배포 <a id="next-lightsail"></a>
 
-> **상태**: Lightsail 마이그레이션 작업 완료 후 진행 예정
-> **서버**: ninetynine99.co.kr (Amazon Lightsail)
+> **상태**: ✅ 배포 완료 (2026-05-06)
+> **서버**: Amazon Lightsail (ubuntu@43.203.182.190)
+> **도메인**: https://ve.ninetynine99.co.kr
 > **GitHub**: https://github.com/bignine99/ve_database_and_knowledge_graph.git
 
-### Step 1: 서버 환경 구성
-```bash
-# 1-1. 프로젝트 클론
-cd /opt
-git clone https://github.com/bignine99/ve_database_and_knowledge_graph.git ve_database
-cd ve_database
+### 19.1 서버 환경
+| 항목 | 값 |
+|---|---|
+| OS | Ubuntu 24.04 LTS (Kernel 6.17) |
+| Python | 3.12.3 |
+| 디스크 | 58GB (사용 16GB, 여유 42GB) |
+| 메모리 | 1.9GB (Swap 2GB) |
+| PM2 | 설치됨 |
+| Nginx | 설치됨 + Let's Encrypt SSL |
 
-# 1-2. Python 가상환경 + 의존성
+### 19.2 배포 실행 내역
+```bash
+# Step 1: 프로젝트 클론
+cd /home/ubuntu
+git clone https://github.com/bignine99/ve_database_and_knowledge_graph.git ve_database
+
+# Step 2: Python 가상환경 + 의존성 설치
+cd ve_database
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
-pip install gunicorn
+pip install -r requirements.txt  # 60+ 패키지 (Flask, Gunicorn, psycopg2-binary 등)
 
-# 1-3. 환경변수 (.env 생성)
-# SUPABASE_DB_HOST, SUPABASE_DB_PORT, SUPABASE_DB_NAME,
-# SUPABASE_DB_USER, SUPABASE_DB_PASS, GEMINI_API_KEY
-```
+# Step 3: 환경변수 설정
+# .env 파일 생성 (SUPABASE_*, GEMINI_API_KEY)
 
-### Step 2: 데이터 파이프라인 실행 (서버에서)
-```bash
-# 2-1. 원본 PDF 업로드 (.raw_data/)
-# 2-2. 배치 추출 실행
-python -m src.batch_processor
-# 2-3. DB 적재
-python -m src.db_builder
-# 2-4. KG 재구축
-python -m src.kg_builder
-```
-
-### Step 3: Gunicorn + PM2 서비스 등록
-```bash
-# 3-1. PM2로 Gunicorn 실행
-pm2 start "gunicorn -w 4 -b 127.0.0.1:5001 src.app:app" --name ve-dashboard
+# Step 4: PM2 서비스 등록
+pm2 start '/home/ubuntu/ve_database/venv/bin/gunicorn -w 2 -b 127.0.0.1:5003 \
+  --timeout 120 --chdir /home/ubuntu/ve_database src.app:app' --name ve-dashboard
 pm2 save
 
-# 3-2. Nginx 리버스 프록시
-# /etc/nginx/sites-available/ve-dashboard
-# server_name ve.ninetynine99.co.kr;
-# location / { proxy_pass http://127.0.0.1:5001; }
+# Step 5: Nginx 리버스 프록시 (ve.ninetynine99.co.kr → 127.0.0.1:5003)
+# /etc/nginx/sites-enabled/ninetynine 에 server 블록 추가
+
+# Step 6: DNS + SSL
+# 가비아 DNS: *.ninetynine99.co.kr → 43.203.182.190 (와일드카드 A 레코드)
+sudo certbot --nginx -d ve.ninetynine99.co.kr --non-interactive --agree-tos
 ```
 
-### Step 4: SSL + 도메인
-```bash
-# 4-1. DNS A 레코드: ve.ninetynine99.co.kr → Lightsail IP
-# 4-2. Certbot SSL
-sudo certbot --nginx -d ve.ninetynine99.co.kr
-```
+### 19.3 시행착오: SSH 접속
+- **문제**: `bitnami@` 사용자로 접속 시도 → Permission denied
+- **해결**: Lightsail Ubuntu 인스턴스는 `ubuntu@` 사용자 사용
+- **키 파일**: `LightsailDefaultKey-ap-northeast-2.pem`
 
-### Step 5: 검증 체크리스트
-- [ ] `https://ve.ninetynine99.co.kr/` — 랜딩 페이지 로드
-- [ ] `https://ve.ninetynine99.co.kr/dashboard` — 대시보드 KPI 데이터 표시
-- [ ] `/api/stats` — JSON 응답 확인
-- [ ] `/api/kg/query?q=옥상 방수` — KG hop 질의 응답
-- [ ] Knowledge Graph 인터랙티브 뷰어 동작
-- [ ] AI VE 자문 페이지 동작
+### 19.4 시행착오: Nginx 설정 (PowerShell 변수 치환)
+- **문제**: PowerShell에서 SSH heredoc 전달 시 `$host`, `$remote_addr` 등이 PS 변수로 해석
+- **증상**: `proxy_set_header Host System.Management.Automation.Internal.Host.InternalHost;`
+- **해결**: Python 스크립트를 scp로 전송 후 서버에서 실행하여 nginx 설정 작성
+
+### 19.5 시행착오: DNS 설정
+- **문제**: 서브도메인마다 개별 A 레코드 추가 필요 → 비효율적
+- **해결**: 가비아 DNS에 와일드카드 A 레코드 (`*` → `43.203.182.190`) 등록
+- **효과**: 향후 새 서비스 배포 시 DNS 작업 불필요
+
+### 19.6 검증 결과
+- [x] `https://ve.ninetynine99.co.kr/` — 랜딩 페이지 200 OK
+- [x] `https://ve.ninetynine99.co.kr/dashboard` — 대시보드 200 OK
+- [x] `/api/stats` — JSON 응답 200 OK
+- [x] `/api/kg/data` — KG 데이터 200 OK
+- [x] SSL 인증서 유효 (Let's Encrypt, 만료: 2026-08-04)
 
 ---
 
