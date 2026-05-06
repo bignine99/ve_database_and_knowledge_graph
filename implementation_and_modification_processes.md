@@ -583,6 +583,28 @@ var BYPASS_PASSWORD = true;
 
 - **배포**: `npm run build` → `pm2 restart ninetynine-hub`
 
+### 20.5 프로덕션 이미지 경로 매핑 수정
+- **증상**: 대시보드 상세 모달에서 원안/대안 이미지가 로딩되지 않음 (깨진 이미지 아이콘)
+- **원인**: Supabase DB에 저장된 이미지 경로가 로컬 Windows 절대 경로 (`C:\Users\cho\...\data\images\대안_02\...`)
+- **서버 상태**: `data/images/` 폴더가 `.gitignore`로 제외되어 서버에 이미지 파일 자체가 없었음
+- **해결**:
+  1. 로컬 `data/images/` (25MB, 284파일, 107개 대안 폴더) → SCP로 서버 전송
+  2. `app.py`의 `serve_abs_image` API에 Windows → Linux 경로 자동 매핑 로직 추가
+
+```python
+# app.py — serve_abs_image 경로 매핑 핵심 로직
+if not p.exists() and ('\\' in fpath or 'C:' in fpath):
+    normalized = fpath.replace('\\', '/')
+    marker = 'data/images/'
+    idx = normalized.find(marker)
+    if idx >= 0:
+        relative = normalized[idx:]
+        server_path = Path('/home/ubuntu/ve_database') / relative
+```
+
+- **커밋**: `7c505bc`
+- **검증**: `https://ve.ninetynine99.co.kr/api/serve_abs_image?path=C:\...\대안_02\..._original_diagram.jpeg` → 200 OK (image/jpeg, 187KB)
+
 ---
 
 ## 최종 데이터베이스 현황 <a id="final-status"></a>
