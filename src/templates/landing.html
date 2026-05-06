@@ -392,6 +392,13 @@
 <script src="/static/js/hero-particles.js"></script>
 <script>
 (function(){
+  /* ── PASSWORD GATE BYPASS ──
+   * 현재 맛보기 단계이므로 비밀번호 없이 바로 대시보드 접근 허용.
+   * 향후 대규모 데이터 업데이트 후 다시 활성화할 예정.
+   * → 복원 방법: BYPASS_PASSWORD를 false로 변경하면 비밀번호 모달 복원됨.
+   */
+  var BYPASS_PASSWORD = true;
+
   var overlay = document.getElementById('pw-overlay');
   var input = document.getElementById('pw-input');
   var error = document.getElementById('pw-error');
@@ -399,7 +406,10 @@
   var btnClose = document.getElementById('pw-close');
   var btnSubmit = document.getElementById('pw-submit');
 
-  btnEnter.addEventListener('click', function(){ overlay.classList.add('active'); setTimeout(function(){ input.focus(); }, 300); });
+  btnEnter.addEventListener('click', function(){
+    if(BYPASS_PASSWORD){ window.location.href='/dashboard'; return; }
+    overlay.classList.add('active'); setTimeout(function(){ input.focus(); }, 300);
+  });
   btnClose.addEventListener('click', function(){ overlay.classList.remove('active'); error.classList.remove('show'); input.value=''; });
   overlay.addEventListener('click', function(e){ if(e.target===overlay){ overlay.classList.remove('active'); error.classList.remove('show'); input.value=''; } });
 
