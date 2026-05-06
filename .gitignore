@@ -1,0 +1,40 @@
+# ── Environment & Secrets ──
+.env
+.env.*
+*.env
+
+# ── Agent sensitive ──
+.agent/.rule.md
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# ── Raw data (large PDFs) ──
+.raw_data/
+
+# ── IDE ──
+.vscode/
+.idea/
+
+# ── OS ──
+Thumbs.db
+.DS_Store
+
+# ── Data artifacts (large, rebuild from pipeline) ──
+data/images/
+data/images_*/
+data/extracted/
+data/extracted_*/
+data/db/
+data/pages/
+# NOTE: data/kg/ is tracked — contains KG graphml required for service
+
+# ── Scratch (temp files) ──
+scratch/

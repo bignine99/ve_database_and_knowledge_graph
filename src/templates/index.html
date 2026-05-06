@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VE Database — 건설 VE 종합 분석 대시보드</title>
+  <meta name="description" content="107개 건설 VE 대안의 CUBE 표준분류체계 기반 종합 분석 대시보드">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <h1>VE Database</h1>
+    <p>CUBE 표준분류체계 분석</p>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-item active" data-page="overview" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      01. 종합 현황
+    </a>
+    <a class="nav-item" data-page="alternatives" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      02. VE 대안 목록
+    </a>
+    <a class="nav-item" data-page="cost" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      03. 비용 분석
+    </a>
+    <a class="nav-item" data-page="kg" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="4" r="2"/><circle cx="20" cy="4" r="2"/><circle cx="4" cy="20" r="2"/><circle cx="20" cy="20" r="2"/><line x1="6" y1="6" x2="10" y2="10"/><line x1="14" y1="10" x2="18" y2="6"/><line x1="6" y1="18" x2="10" y2="14"/><line x1="14" y1="14" x2="18" y2="18"/></svg>
+      04. 지식 그래프
+    </a>
+    <a class="nav-item" data-page="ai" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      05. AI VE 자문
+    </a>
+    <a class="nav-item" data-page="performance" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+      06. 성능 분석
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    CUBE Standard Classification<br>
+    <a href="https://www.ninetynine99.co.kr/" target="_blank">ninetynine99.co.kr</a>
+  </div>
+</aside>
+
+<!-- ══ HEADER ══ -->
+<header class="header">
+  <div class="header-title" id="page-title">종합 현황</div>
+  <div class="header-tech">
+    <span>Supabase</span>
+    <span>지식 그래프</span>
+    <span>CUBE 표준</span>
+    <span>Gemini AI</span>
+    <a href="/" class="home-btn" title="Home" aria-label="Go to landing page">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </a>
+  </div>
+</header>
+
+<!-- ══ MAIN ══ -->
+<main class="main-content">
+
+  <!-- ── PAGE 1: 종합 현황 ── -->
+  <div class="page active" id="page-overview">
+    <div class="kpi-row" id="kpi-row"></div>
+    <div class="chart-row">
+      <div class="chart-card"><h3>HOW1 공사 유형별 분포</h3><canvas id="chart-how1"></canvas></div>
+      <div class="chart-card"><h3>가치 유형 분포</h3><canvas id="chart-vtype"></canvas></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-card"><h3>프로젝트별 대안 수</h3><canvas id="chart-proj"></canvas></div>
+      <div class="chart-card"><h3>분야별 분포 (토목/건축/설비)</h3><canvas id="chart-field"></canvas></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-card"><h3>HOW2 대공종 상위 15개</h3><canvas id="chart-how2"></canvas></div>
+      <div class="chart-card"><h3>공간(Space)별 대안 분포</h3><canvas id="chart-space"></canvas></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-card"><h3>가치 향상 Top 10</h3><canvas id="chart-value-top"></canvas></div>
+      <div class="chart-card"><h3>비용 절감 효과 상위 20개</h3><canvas id="chart-savings"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── PAGE 2: VE 대안 목록 ── -->
+  <div class="page" id="page-alternatives">
+    <div class="filter-bar">
+      <input type="text" id="alt-search" placeholder="대안 검색 (제안명, 공종명 등)...">
+      <select id="alt-how1-filter">
+        <option value="">전체 공사</option>
+        <option value="A">A 건축공사</option>
+        <option value="B">B 토목공사</option>
+        <option value="C">C 조경공사</option>
+        <option value="D">D 전기공사</option>
+        <option value="E">E 기계설비공사</option>
+        <option value="F">F 소방공사</option>
+      </select>
+      <select id="alt-vtype-filter">
+        <option value="">전체 가치유형</option>
+        <option value="가치혁신형">가치혁신형</option>
+        <option value="성능강조형">성능강조형</option>
+        <option value="비용절감형">비용절감형</option>
+        <option value="성능향상형">성능향상형</option>
+      </select>
+      <span class="filter-count" id="alt-count"></span>
+    </div>
+    <div style="background:#fff;border:1px solid var(--color-border);border-radius:4px;overflow:auto;max-height:calc(100vh - 160px);">
+      <table class="data-table" id="alt-table">
+        <thead><tr>
+          <th>번호</th><th>제안명</th><th>대공종</th>
+          <th>공간</th><th>가치유형</th><th>비용변화</th><th>가치변화</th>
+        </tr></thead>
+        <tbody id="alt-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── PAGE 3: 비용 분석 ── -->
+  <div class="page" id="page-cost">
+    <div class="chart-row" style="margin-bottom:16px;">
+      <div class="chart-card"><h3>대안별 생애주기비용 절감액</h3><canvas id="chart-cost-bar"></canvas></div>
+      <div class="chart-card"><h3>절감율 vs 가치변화 분포</h3><canvas id="chart-cost-scatter"></canvas></div>
+    </div>
+    <div class="chart-row" style="margin-bottom:16px;">
+      <div class="chart-card"><h3>절감률 분포 (히스토그램)</h3><canvas id="chart-savings-hist"></canvas></div>
+      <div class="chart-card"><h3>HOW2별 평균 절감률</h3><canvas id="chart-how2-savings"></canvas></div>
+    </div>
+    <div style="background:#fff;border:1px solid var(--color-border);border-radius:4px;overflow:auto;max-height:400px;">
+      <table class="data-table" id="cost-table">
+        <thead><tr>
+          <th>번호</th><th>제안명</th><th>원안 비용</th>
+          <th>대안 비용</th><th>절감액</th><th>절감율</th>
+        </tr></thead>
+        <tbody id="cost-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── PAGE 4: 지식 그래프 ── -->
+  <div class="page" id="page-kg">
+    <div class="kg-layout">
+      <div class="kg-main">
+        <div style="display:flex;gap:10px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
+          <div class="badge badge-blue" style="font-size:11px;" id="kg-node-count">노드: -</div>
+          <div class="badge badge-green" style="font-size:11px;" id="kg-edge-count">엣지: -</div>
+          <select id="kg-filter" style="font-size:12px;padding:4px 10px;border:1px solid var(--color-border-mid);border-radius:3px;">
+            <option value="">전체 노드</option>
+            <option value="Alternative">대안 (Alternative)</option>
+            <option value="SubWorkType">대공종 (HOW2)</option>
+            <option value="Space">공간 (Space)</option>
+            <option value="Material">자재 (Material)</option>
+            <option value="ValueType">가치유형 (ValueType)</option>
+            <option value="WorkType">공사 (HOW1)</option>
+            <option value="Location">위치 (Location)</option>
+          </select>
+          <div class="kg-legend">
+            <span class="legend-dot" style="background:#FF6B6B;"></span>프로젝트
+            <span class="legend-dot" style="background:#4ECDC4;"></span>대안
+            <span class="legend-dot" style="background:#2ECC71;"></span>대공종
+            <span class="legend-dot" style="background:#87CEEB;"></span>공간
+            <span class="legend-dot" style="background:#FFEAA7;"></span>자재
+            <span class="legend-dot" style="background:#F39C12;"></span>가치유형
+            <span class="legend-dot" style="background:#96CEB4;"></span>공사
+          </div>
+        </div>
+        <div id="kg-container"></div>
+      </div>
+      <div class="kg-sidebar" id="kg-sidebar">
+        <div class="kg-sidebar-header">
+          <h3>노드 상세 정보</h3>
+          <button class="kg-sidebar-close" id="kg-sidebar-close">&times;</button>
+        </div>
+        <div class="kg-sidebar-body" id="kg-sidebar-body">
+          <p class="kg-sidebar-placeholder">그래프에서 노드를 클릭하면<br>상세 정보가 표시됩니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE 5: AI VE 자문 ── -->
+  <div class="page" id="page-ai">
+    <div class="ai-chat-container">
+      <div class="chat-panel">
+        <h3 style="font-size:13px;font-weight:600;color:var(--color-navy);margin-bottom:12px;">AI VE 자문 검색</h3>
+        <div class="chat-input-area">
+          <input type="text" class="chat-input" id="ai-query" placeholder="예: 옥상 방수공사에 적용 가능한 VE item은?" value="옥상 방수공사에 적용 가능한 VE item은?">
+          <button class="chat-btn" id="ai-search-btn">검색</button>
+        </div>
+        <div class="chat-response" id="ai-response">
+          <p style="color:var(--color-text-muted);text-align:center;padding:60px 0;">
+            질의어를 입력하고 검색 버튼을 누르면<br>지식 그래프에서 관련 VE 대안을 탐색합니다.
+          </p>
+        </div>
+      </div>
+      <div class="chat-panel">
+        <h3 style="font-size:13px;font-weight:600;color:var(--color-navy);margin-bottom:12px;">KG Hop 시각화</h3>
+        <div id="ai-kg-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE 6: 성능 분석 ── -->
+  <div class="page" id="page-performance">
+    <div class="kpi-row" id="perf-kpi-row"></div>
+    <div class="chart-row">
+      <div class="chart-card"><h3>5대 성능 카테고리 평균 (레이더)</h3><canvas id="chart-perf-radar"></canvas></div>
+      <div class="chart-card"><h3>성능-비용 4사분면 매트릭스</h3><canvas id="chart-quadrant"></canvas></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-card"><h3>카테고리별 원안 vs 대안 성능</h3><canvas id="chart-perf-compare"></canvas></div>
+      <div class="chart-card"><h3>HOW1 × 가치유형 히트맵</h3><canvas id="chart-heatmap"></canvas></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══ MODAL ══ -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">대안 상세</h2>
+      <button class="modal-close" id="modal-close-btn">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>

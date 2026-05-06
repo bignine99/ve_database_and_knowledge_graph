@@ -1,0 +1,90 @@
+{
+  "total_nodes": 352,
+  "total_edges": 1071,
+  "node_types": {
+    "Project": 2,
+    "Alternative": 236,
+    "Space": 22,
+    "WorkType": 6,
+    "SubWorkType": 37,
+    "Material": 30,
+    "ValueType": 4,
+    "Location": 9,
+    "Unknown": 1,
+    "PerformanceCategory": 5
+  },
+  "edge_types": {
+    "BELONGS_TO": 273,
+    "LOCATED_IN": 122,
+    "WORK_TYPE": 173,
+    "SUB_WORK_TYPE": 173,
+    "USES_MATERIAL": 52,
+    "CLASSIFIED_AS": 236,
+    "REPLACES_MATERIAL": 9,
+    "LOCATED_AT": 33
+  },
+  "components": 7,
+  "density": 0.008668,
+  "top_10_central_nodes": [
+    {
+      "node": "vtype_가치혁신형",
+      "label": "가치혁신형",
+      "type": "ValueType",
+      "centrality": 0.4074
+    },
+    {
+      "node": "2",
+      "label": "2",
+      "type": "",
+      "centrality": 0.3675
+    },
+    {
+      "node": "gangwon_newoffice_ve",
+      "label": "강원특별자치도 신청사 건립공사 실시설계 VE",
+      "type": "Project",
+      "centrality": 0.3048
+    },
+    {
+      "node": "how1_A",
+      "label": "건축공사",
+      "type": "WorkType",
+      "centrality": 0.2764
+    },
+    {
+      "node": "vtype_성능강조형",
+      "label": "성능강조형",
+      "type": "ValueType",
+      "centrality": 0.2051
+    },
+    {
+      "node": "how1_D",
+      "label": "전기공사",
+      "type": "WorkType",
+      "centrality": 0.114
+    },
+    {
+      "node": "how2_A-03",
+      "label": "철근콘크리트공사",
+      "type": "SubWorkType",
+      "centrality": 0.094
+    },
+    {
+      "node": "how1_B",
+      "label": "토목공사",
+      "type": "WorkType",
+      "centrality": 0.094
+    },
+    {
+      "node": "how1_E",
+      "label": "기계설비공사",
+      "type": "WorkType",
+      "centrality": 0.0655
+    },
+    {
+      "node": "vtype_비용절감형",
+      "label": "비용절감형",
+      "type": "ValueType",
+      "centrality": 0.0513
+    }
+  ]
+}

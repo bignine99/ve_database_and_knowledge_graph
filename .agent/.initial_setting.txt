@@ -1,0 +1,1 @@
+"우리의 개발 표준인 하네스 시스템이 설치된 신규 프로젝트입니다. 작업을 시작하기 전에 프로젝트 루트의 .rule.md와 .agent/harness/AI_AGENT_HARNESS_GUIDE.md를 필독하여 숙지해줘." "작업 중 .rule.md 섹션 7.1의 SKILL 트리거 조건에 해당하면, 반드시 해당 .agent/skills/*/SKILL.md를 읽고 절차를 따라야 해." "앞으로 네가 수행하는 모든 코드 작성 및 수정 작업이 끝날 때는, 반드시 스스로 node .agent/harness/validator.mjs를 터미널에서 실행해보고 에러가 0건인지 체크한 뒤 나에게 보고해야 해."

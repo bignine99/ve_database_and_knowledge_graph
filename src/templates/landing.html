@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Value Engineering Powered by AI Agent</title>
+  <meta name="description" content="AI Agent 기반 건설 VE 데이터베이스 — 727건의 VE 대안, CUBE 표준분류, Knowledge Graph, Hybrid RAG 기술">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/landing.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     SECTION 1: HERO
+     ═══════════════════════════════════════ -->
+<section class="hero">
+  <!-- Three.js Particle Canvas -->
+  <canvas id="heroParticles"></canvas>
+
+  <!-- Aurora Background -->
+  <div class="aurora-layer">
+    <div class="aurora-blob a1"></div>
+    <div class="aurora-blob a2"></div>
+    <div class="aurora-blob a3"></div>
+  </div>
+
+  <!-- Floating VE Keywords -->
+  <div class="floating-words" aria-hidden="true">
+    <span class="fw" style="--delay:0s;--x:12%;--y:18%">Function</span>
+    <span class="fw" style="--delay:3.3s;--x:75%;--y:22%">LCC</span>
+    <span class="fw" style="--delay:6.6s;--x:25%;--y:72%">Alternative</span>
+    <span class="fw" style="--delay:10s;--x:82%;--y:68%">Brainstorming</span>
+    <span class="fw" style="--delay:13.3s;--x:50%;--y:85%">FAST</span>
+    <span class="fw" style="--delay:16.6s;--x:65%;--y:15%">Quality</span>
+  </div>
+
+  <div class="grid-lines">
+    <div class="v-line" style="left:20%"></div>
+    <div class="v-line" style="left:40%"></div>
+    <div class="v-line" style="left:60%"></div>
+    <div class="v-line" style="left:80%"></div>
+  </div>
+
+  <div class="hero-badge">
+    <span class="pulse-dot"></span>
+    ENTERPRISE VE INTELLIGENCE
+  </div>
+
+  <h1 class="gradient-title">
+    Value Engineering<br>
+    <span class="accent-word">Powered by AI Agent</span>
+  </h1>
+
+  <p class="hero-sub">
+    30,000+ VE 사례 원시정보를 추출, 정규화하여 구축한 통합 데이터베이스.
+    CUBE기반 데이터모델링, Knowledge Graph 기반 성능-비용-가치 분석을 제공합니다.
+    AI에게 문의하면 성능은 올리고, 가격을 낮추어 드립니다.
+  </p>
+
+  <button class="hero-cta" id="btn-enter" type="button">
+    ENTER DASHBOARD
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M5 12h14M12 5l7 7-7 7"/>
+    </svg>
+  </button>
+
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="num"><span class="count-up" data-target="15000" data-suffix="+">0</span></div>
+      <div class="label font-outfit">VE Alternatives</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num"><span class="count-up" data-target="2350">0</span></div>
+      <div class="label font-outfit">Data Sources</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num"><span class="count-up" data-target="30275" data-suffix="+">0</span></div>
+      <div class="label font-outfit">Performance Scores</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num"><span class="count-up" data-target="10">0</span></div>
+      <div class="label font-outfit">Disciplines</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════
+     SECTION 2: PLATFORM CONTENTS
+     ═══════════════════════════════════════ -->
+<div class="section">
+  <div class="reveal">
+    <div class="section-label font-outfit">Platform Contents</div>
+    <h2 class="section-title">VE 분석 플랫폼이 제공하는 콘텐츠</h2>
+    <p class="section-desc">
+      건설 VE 보고서에서 추출된 구조화 데이터를 기반으로, 성능-비용-가치의 다차원 분석과
+      AI 기반 의사결정 지원 도구를 제공합니다.
+    </p>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </div>
+      <h3>VE 종합 현황 대시보드</h3>
+      <p>727건의 VE 대안을 프로젝트별, 분야별, 가치유형별로 분류하여 실시간 KPI와 도넛/바 차트로 시각화합니다. 공종 분포, HOW2 대공종, SPACE 분석을 한 눈에 파악합니다.</p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+      </div>
+      <h3>성능-비용-가치 분석</h3>
+      <p>6~7개 성능 카테고리(시공성, 안전성, 유지관리성 등)의 원안 대비 대안 점수 변화를 레이더 차트와 4사분면 매트릭스로 분석합니다. 카테고리별 delta 추적이 가능합니다.</p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      </div>
+      <h3>비용 절감 효과 분석</h3>
+      <p>초기공사비, LCC(생애주기비용) 기반의 원안/대안 비용 비교와 절감액/절감율을 산출합니다. 프로젝트별 비용 절감 히스토그램과 공종별 절감 패턴을 도출합니다.</p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      </div>
+      <h3>VE 대안 검색 및 상세</h3>
+      <p>727건의 VE 대안을 키워드, 분야, 가치유형으로 필터링하고, 개선전/후 설명, 장단점, 설계자 검토의견까지 상세 조회할 수 있습니다. CUBE 분류 코드가 자동 태깅됩니다.</p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      </div>
+      <h3>Knowledge Graph 시각화</h3>
+      <p>352개 노드, 1,071개 엣지로 구성된 지식 그래프에서 프로젝트-공종-기술-자재 간의 관계를 인터랙티브하게 탐색합니다. 노드 클릭 시 연관 대안 목록이 표시됩니다.</p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </div>
+      <h3>AI VE 자문 시스템</h3>
+      <p>Gemini 2.0 Flash 기반의 AI 자문 엔진이 VE 데이터베이스를 참조하여 건설 프로젝트 특화 질의응답을 제공합니다. Hybrid RAG 기술로 정확한 근거 기반 답변을 생성합니다.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     SECTION 3: DATABASE ARCHITECTURE (Dark)
+     ═══════════════════════════════════════ -->
+<section class="navy-block">
+  <div class="deco-circle"></div>
+  <div class="deco-circle"></div>
+
+  <div class="navy-inner reveal">
+    <div class="section-label font-outfit">Database Architecture</div>
+    <h2 class="section-title">데이터베이스 설계의 특장점</h2>
+    <p class="section-desc">
+      5개 핵심 테이블의 관계형 스키마에 CUBE 표준분류체계를 결합하여,
+      프로젝트-대안-비용-성능-가치를 일관된 구조로 관리합니다.
+    </p>
+
+    <div class="navy-grid">
+      <div class="navy-card">
+        <div class="card-num font-outfit">01 / SCHEMA</div>
+        <h4>5-Table Relational Schema</h4>
+        <p>projects, alternatives, cost_evaluations, value_evaluations, performance_scores로 구성된 정규화 스키마. 외래키 무결성 100% 보장.</p>
+      </div>
+      <div class="navy-card">
+        <div class="card-num font-outfit">02 / CUBE</div>
+        <h4>CUBE 표준분류 자동 태깅</h4>
+        <p>HOW1(공사유형), HOW2(대공종 48종), SPACE(공간분류) 3축 분류를 AI 기반으로 자동 할당. 분류 커버리지 100%.</p>
+      </div>
+      <div class="navy-card">
+        <div class="card-num font-outfit">03 / SUPABASE</div>
+        <h4>Supabase PostgreSQL</h4>
+        <p>클라우드 네이티브 PostgreSQL에 Session Pooler 기반 안정적 연결. RLS 지원으로 사용자별 접근 제어 가능.</p>
+      </div>
+      <div class="navy-card">
+        <div class="card-num font-outfit">04 / SCALE</div>
+        <h4>확장 가능 구조</h4>
+        <p>9개 소스, 727건에서 시작하여 신규 프로젝트 추가 시 추출기 복사 + 상수 변경만으로 즉시 확장. alt_number 연속성 자동 관리.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════
+     SECTION 4: DATA PIPELINE
+     ═══════════════════════════════════════ -->
+<div class="section">
+  <div class="reveal">
+    <div class="section-label font-outfit">Data Pipeline</div>
+    <h2 class="section-title">AI 기반 자동화 데이터 파이프라인</h2>
+    <p class="section-desc">
+      PDF 원본에서 Supabase 적재까지 6단계 자동화 파이프라인으로
+      1,000페이지 이상의 VE 보고서를 수분 내에 구조화합니다.
+    </p>
+  </div>
+
+  <div class="pipeline-flow reveal">
+    <div class="pipeline-step">
+      <div class="step-num font-outfit">STEP 01</div>
+      <h4>PDF Intake</h4>
+      <p>원본 VE 보고서 PDF 수집 및 페이지 구조 분석</p>
+    </div>
+    <div class="pipeline-arrow">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </div>
+
+    <div class="pipeline-step">
+      <div class="step-num font-outfit">STEP 02</div>
+      <h4>Text Extract</h4>
+      <p>PyMuPDF 직접 추출 또는 Tesseract OCR 자동 전환</p>
+    </div>
+    <div class="pipeline-arrow">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </div>
+
+    <div class="pipeline-step">
+      <div class="step-num font-outfit">STEP 03</div>
+      <h4>Structure Parse</h4>
+      <p>제안명, 개선전/후, 비용, 성능 등 필드 매핑</p>
+    </div>
+    <div class="pipeline-arrow">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </div>
+
+    <div class="pipeline-step">
+      <div class="step-num font-outfit">STEP 04</div>
+      <h4>CUBE Classify</h4>
+      <p>HOW1/HOW2/SPACE 3축 자동 분류 태깅</p>
+    </div>
+    <div class="pipeline-arrow">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </div>
+
+    <div class="pipeline-step">
+      <div class="step-num font-outfit">STEP 05</div>
+      <h4>Normalize</h4>
+      <p>비용 단위 정규화, 중복 제거, JSON 검증</p>
+    </div>
+    <div class="pipeline-arrow">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </div>
+
+    <div class="pipeline-step">
+      <div class="step-num font-outfit">STEP 06</div>
+      <h4>DB Load</h4>
+      <p>Supabase PostgreSQL 5개 테이블 자동 적재</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     SECTION 5: KNOWLEDGE GRAPH + RAG (Image Rows)
+     ═══════════════════════════════════════ -->
+<div class="section">
+  <div class="reveal">
+    <div class="section-label font-outfit">Intelligence Engine</div>
+    <h2 class="section-title">Knowledge Graph + Hybrid RAG</h2>
+    <p class="section-desc">
+      구조화된 VE 데이터를 지식 그래프로 연결하고, Hybrid RAG 기술로
+      맥락 기반의 정확한 AI 분석을 제공합니다.
+    </p>
+  </div>
+
+  <!-- Row 1: Image LEFT — 다차원 관계 모델링 -->
+  <div class="img-row reveal">
+    <div class="img-row-media">
+      <img src="/static/images/다차원 관계 모델링.jpeg" alt="다차원 관계 모델링" loading="lazy">
+    </div>
+    <div class="img-row-text">
+      <span class="tag font-outfit">Knowledge Graph</span>
+      <h4>다차원 관계 모델링</h4>
+      <p>프로젝트, 공종, 기술, 자재, 공간 등 11개 노드 유형과 10개 엣지 유형으로 VE 데이터의 관계를 그래프로 표현합니다.</p>
+      <ul>
+        <li>352개 노드 / 1,071개 엣지</li>
+        <li>NetworkX 기반 그래프 연산</li>
+        <li>인터랙티브 노드 탐색 UI</li>
+        <li>관계 기반 유사 대안 추천</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Row 2: Image RIGHT — 근거 기반 AI 자문 -->
+  <div class="img-row img-row-reverse reveal">
+    <div class="img-row-media">
+      <img src="/static/images/근거 기반 AI 자문.jpeg" alt="근거 기반 AI 자문" loading="lazy">
+    </div>
+    <div class="img-row-text">
+      <span class="tag font-outfit">Hybrid RAG</span>
+      <h4>근거 기반 AI 자문</h4>
+      <p>FAISS 벡터 검색과 Knowledge Graph 구조 검색을 결합하여, 단순 키워드 매칭을 넘어선 맥락 이해 기반의 답변을 생성합니다.</p>
+      <ul>
+        <li>Gemini 2.0 Flash LLM 엔진</li>
+        <li>FAISS 임베딩 + KG 구조 검색</li>
+        <li>출처 추적 (Source Citation)</li>
+        <li>건설 VE 특화 프롬프트 엔진</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Row 3: Image LEFT — 7개 카테고리 성능 분석 -->
+  <div class="img-row reveal">
+    <div class="img-row-media">
+      <img src="/static/images/7대 카테고리 성능 분석.jpeg" alt="7대 카테고리 성능 분석" loading="lazy">
+    </div>
+    <div class="img-row-text">
+      <span class="tag font-outfit">Performance</span>
+      <h4>7개 카테고리 성능 분석</h4>
+      <p>시공성, 유지관리성, 공간활용성, 독창성, 편의성, 안전성, 환경/경관성을 레이더 차트와 히트맵으로 비교 분석합니다.</p>
+      <ul>
+        <li>3,275건 성능 스코어 데이터</li>
+        <li>원안 vs 대안 비교 레이더</li>
+        <li>카테고리별 평균 Delta 추적</li>
+        <li>HOW1 x 가치유형 히트맵</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Row 4: Image RIGHT — KG 서비스 효과 -->
+  <div class="img-row img-row-reverse reveal">
+    <div class="img-row-media">
+      <img src="/static/images/Knowledge_graph.jpeg" alt="Knowledge Graph Database" loading="lazy">
+    </div>
+    <div class="img-row-text">
+      <span class="tag font-outfit">KG Service</span>
+      <h4>방대한 VE 원시정보를 Knowledge Graph 데이터베이스로 가공 서비스의 효과</h4>
+      <div class="kg-metrics">
+        <div class="kg-metric">
+          <span class="kg-metric-value font-outfit">0.0001%</span>
+          <span class="kg-metric-label">Fact 기반 답변 Hallucination</span>
+        </div>
+        <div class="kg-metric">
+          <span class="kg-metric-value font-outfit">1,000x</span>
+          <span class="kg-metric-label">데이터 처리 속도 증가</span>
+        </div>
+        <div class="kg-metric">
+          <span class="kg-metric-value font-outfit">71.5x</span>
+          <span class="kg-metric-label">데이터 검색 토큰비용 감소</span>
+        </div>
+        <div class="kg-metric">
+          <span class="kg-metric-value font-outfit">280%</span>
+          <span class="kg-metric-label">다중관계 노드 기반 Insight 도출 능력</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════ -->
+<footer class="site-footer">
+  <a href="https://www.ninetynine99.co.kr/" target="_blank" rel="noopener noreferrer">
+    https://www.ninetynine99.co.kr/
+  </a>
+  <span>2026 &copy; All Right Reserved by Ninetynine Inc.</span>
+</footer>
+
+<!-- ══ PASSWORD MODAL ══ -->
+<div class="pw-overlay" id="pw-overlay">
+  <div class="pw-modal">
+    <div class="pw-close" id="pw-close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </div>
+    <div class="pw-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/><circle cx="12" cy="16" r="1"/></svg>
+    </div>
+    <h3 class="pw-title font-outfit">ACCESS DASHBOARD</h3>
+    <p class="pw-desc">대시보드에 접근하려면 비밀번호를 입력하세요.</p>
+    <div class="pw-field">
+      <input type="password" id="pw-input" class="font-outfit" placeholder="Password" autocomplete="off" maxlength="10">
+      <div class="pw-error" id="pw-error">비밀번호가 올바르지 않습니다.</div>
+    </div>
+    <button class="pw-submit font-outfit" id="pw-submit" type="button">AUTHENTICATE</button>
+  </div>
+</div>
+
+<script src="/static/js/landing.js"></script>
+<script src="/static/js/hero-particles.js"></script>
+<script>
+(function(){
+  var overlay = document.getElementById('pw-overlay');
+  var input = document.getElementById('pw-input');
+  var error = document.getElementById('pw-error');
+  var btnEnter = document.getElementById('btn-enter');
+  var btnClose = document.getElementById('pw-close');
+  var btnSubmit = document.getElementById('pw-submit');
+
+  btnEnter.addEventListener('click', function(){ overlay.classList.add('active'); setTimeout(function(){ input.focus(); }, 300); });
+  btnClose.addEventListener('click', function(){ overlay.classList.remove('active'); error.classList.remove('show'); input.value=''; });
+  overlay.addEventListener('click', function(e){ if(e.target===overlay){ overlay.classList.remove('active'); error.classList.remove('show'); input.value=''; } });
+
+  function tryAuth(){
+    if(input.value==='0172'){ window.location.href='/dashboard'; }
+    else { error.classList.add('show'); input.classList.add('shake'); setTimeout(function(){ input.classList.remove('shake'); },500); }
+  }
+  btnSubmit.addEventListener('click', tryAuth);
+  input.addEventListener('keydown', function(e){ if(e.key==='Enter') tryAuth(); });
+  input.addEventListener('input', function(){ error.classList.remove('show'); });
+})();
+</script>
+</body>
+</html>
