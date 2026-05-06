@@ -1,8 +1,8 @@
 # VE Database Development — Implementation & Modification Processes
 
 > **Project**: Construction VE (Value Engineering) Database & Analytics Dashboard  
-> **Period**: 2026-05-04 ~ 2026-05-05  
-> **Stack**: Flask + Supabase PostgreSQL + Chart.js + CUBE Taxonomy  
+> **Period**: 2026-05-04 ~ 2026-05-06  
+> **Stack**: Flask + Supabase PostgreSQL + Chart.js + CUBE Taxonomy + NetworkX KG  
 > **Author**: AI Agent (Antigravity)
 
 ---
@@ -20,8 +20,16 @@
 9. [Phase 9: 왕산2초중통합 신축공사](#phase-9)
 10. [Phase 10: 화곡초등학교 건립공사](#phase-10)
 11. [Phase 11: 히어로 랜딩 페이지 구축](#phase-11)
-12. [최종 데이터베이스 현황](#final-status)
-13. [기술적 교훈 및 시행착오 기록](#lessons-learned)
+12. [Phase 12: 텍스트 추출 엔진](#phase-12)
+13. [Phase 13: 통합 파이프라인 + 배치 + DB 적재](#phase-13)
+14. [Phase 14: Knowledge Graph 구축](#phase-14)
+15. [Phase 15: AI Enhancement](#phase-15)
+16. [Phase 16: CUBE 온톨로지 보강](#phase-16)
+17. [Phase 17: Flask 종합 대시보드](#phase-17)
+18. [Phase 18: Git 배포 준비](#phase-18)
+19. [향후 작업: Amazon Lightsail 배포](#next-lightsail)
+20. [최종 데이터베이스 현황](#final-status)
+21. [기술적 교훈 및 시행착오 기록](#lessons-learned)
 
 ---
 
@@ -303,7 +311,222 @@ for i in range(pages):
 
 ### 11.3 진행 상태
 - 라우트 추가 완료
-- `landing.html` 템플릿 작성 진행 중
+- `landing.html` 완성 — WebGL 셰이더 히어로, KG+RAG 이미지 섹션, 파이프라인 애니메이션, 비밀번호 게이트
+
+---
+
+## Phase 12: 텍스트 추출 엔진 (text_extractor.py) <a id="phase-12"></a>
+
+### 12.1 한글 인코딩 문제 해결
+- **문제**: PDF의 YDIYGO 폰트(KSC-EUC-H CMap)가 pdfplumber에서 깨짐
+- **시도**: pdfplumber → PyMuPDF `get_text()` → rawdict 모드 순차 시도
+- **해결**: PyMuPDF `get_text("dict")` 모드 — 유니코드 내부값은 정상, 콘솔 출력만 깨짐 확인
+- **검증**: JSON 저장 시 한글 정상 출력 확인
+
+### 12.2 좌표 기반 필드 매핑
+```
+y~93:  대안번호 + 위치 + 제안명 (헤더)
+y~287: 원안 레이블 / y~403: 원안 설명
+y~563: 대안 레이블 / y~680: 대안 설명
+y~714: 장점/단점/고려사항 (x좌표로 구분)
+```
+
+### 12.3 결과
+- `text_extractor.py` 완성 — 107개 대안 전체 텍스트 추출 성공
+
+---
+
+## Phase 13: 통합 파이프라인 + 배치 처리 + DB 적재 <a id="phase-13"></a>
+
+### 13.1 pipeline.py — 통합 추출 파이프라인
+- 텍스트(fitz) → 테이블(pdfplumber) → 이미지 순서로 통합
+- `AlternativeData` 구조체 생성, 완성도(completeness) 자동 산출
+
+### 13.2 batch_processor.py — 전체 배치 처리
+- **결과**: 107/107 (100%) 성공, 131.7초 (대안당 1.2초), 실패 0건
+
+### 13.3 db_builder.py — JSON → SQLite 적재
+| 테이블 | 레코드 |
+|---|---|
+| projects | 1 |
+| alternatives | 107 |
+| images | 284 |
+| performance_scores | 2,354 |
+| cost_evaluations | 334 |
+| value_evaluations | 107 |
+
+---
+
+## Phase 14: Knowledge Graph 구축 (kg_builder.py) <a id="phase-14"></a>
+
+### 14.1 KG v1 — 초기 구축
+- **7개 노드 타입**: Project, Alternative, Location, WorkType, Material, PerformanceCategory, ValueType
+- **5개 엣지 타입**: BELONGS_TO, CLASSIFIED_AS, LOCATED_AT, USES_MATERIAL, EVALUATED_BY
+- **결과**: 177 노드, 417 엣지
+- **시행착오**: GraphML에서 `None` 값 불허 → 기본값(0.0, "") 처리
+
+### 14.2 KG 시각화 (kg_visualizer.py)
+- 3개 PNG 차트 + HTML 인터랙티브 뷰어(vis-network) 생성
+- `.graphml` 파일은 Gephi 필요 → HTML 뷰어로 대체
+
+---
+
+## Phase 15: AI Enhancement (ai_enhancer.py) <a id="phase-15"></a>
+
+### 15.1 Gemini 2.0 Flash 연동
+- 개요도 이미지 → 건축 기술 서술 자동 생성
+- 원안 AI 서술: 95/107 (88.8%), 대안 AI 서술: 82/107 (76.6%)
+- 총 171개 AI 서술 생성, 소요시간 ~13분
+
+### 15.2 데이터 교차 검증
+- 비용 논리 (초기+유지관리=LCC): 107/107 통과
+- 성능 합계: 101/107 통과 (6건 경미한 차이)
+- 가치 공식 (V ≈ P+C): 107/107 통과
+
+### 15.3 보안 처리
+- Gemini API Key 하드코딩 → `os.getenv("GEMINI_API_KEY")` + `.env` 분리
+
+---
+
+## Phase 16: CUBE 표준분류체계 온톨로지 보강 <a id="phase-16"></a>
+
+### 16.1 온톨로지 진단 (AS-IS 문제점)
+| 항목 | 보강 전 | 문제 |
+|---|---|---|
+| ValueType | 13/107 (12.1%) | 87.9% 추출 실패 |
+| HOW2 대공종 | 82/107 (76.6%) | 25건 미분류 |
+| Space 공간 | 44/107 (41.1%) | 63건 미분류 |
+
+### 16.2 cube_taxonomy.py — CUBE 3축 마스터 데이터
+- WHERE: 프로젝트구분 → 프로젝트속성 (4구분 × 28속성)
+- WHAT: 구조체구분 → 구조체분류 → 부재
+- HOW: 공사 → 대공종 (6공사 × 87대공종) → 중공종 (자유 분류)
+- 키워드 매핑: ~150개 키워드로 자동 분류
+
+### 16.3 보강 결과
+| 항목 | 보강 전 | 보강 후 |
+|---|---|---|
+| ValueType | 12.1% | **100%** |
+| HOW2 대공종 | 76.6% | **100%** |
+| Space 공간 | 41.1% | **43.9%** (나머지는 본질적으로 공간 정보 없음) |
+
+### 16.4 KG v2 — CUBE 기반 재구축
+| 항목 | v1 | v2 |
+|---|---|---|
+| 총 노드 | 177 | **210** (+19%) |
+| 총 엣지 | 417 | **619** (+48%) |
+| Space 노드 | 0 | **22** (신규) |
+| SubWorkType 노드 | 0 | **30** (신규) |
+| REPLACES_MATERIAL 엣지 | 0 | **8** (신규) |
+
+### 16.5 Hop 질의 검증
+- "옥상 방수 VE item" → **5개 대안 매칭 성공**
+- 경로: Space(옥상) → [LOCATED_IN] → Alternative → [SUB_WORK_TYPE] → 방수코킹공사
+
+---
+
+## Phase 17: Flask 종합 대시보드 구축 <a id="phase-17"></a>
+
+### 17.1 백엔드 (app.py)
+- DB: Supabase PostgreSQL (Session Pooler) 연결
+- REST API: `/api/stats`, `/api/alternatives`, `/api/alternatives/<num>`, `/api/kg/data`, `/api/kg/query`, `/api/stats/extended`
+- 이미지 서빙: 절대경로 지원
+
+### 17.2 프론트엔드 (SPA 구조)
+- **6페이지**: Overview, Alternatives, Cost Analysis, Knowledge Graph, AI VE 자문, 성능 분석
+- **디자인**: SaaS Design Skill 준수 — White Mode, Navy-Accent, Pretendard+Outfit 폰트
+- **Chart.js**: KPI 카드, HOW1/HOW2 분포, 가치유형, 절감률 히스토그램, 성능-비용 4사분면
+- **vis-network**: KG 인터랙티브 그래프 뷰어
+
+### 17.3 랜딩 페이지 (landing.html)
+- WebGL 셰이더 히어로 애니메이션
+- KG + RAG 이미지 섹션, 6-Stage 파이프라인 애니메이션
+- 비밀번호 게이트 (대시보드 접근 제어)
+
+---
+
+## Phase 18: Git 배포 준비 <a id="phase-18"></a>
+
+### 18.1 보안 검증
+| 검사 항목 | 조치 |
+|---|---|
+| Gemini API Key | `os.getenv()` 전환, `.env`에 분리 |
+| Supabase 호스트 ID | 문서에서 `<project-id>` 플레이스홀더로 교체 |
+| `.env` 파일 | `.gitignore` 등록 |
+| `.raw_data/` | `.gitignore` 등록 |
+| `data/extracted/`, `data/images/`, `data/db/` | `.gitignore` 등록 |
+| `data/kg/` | **추적 유지** (서비스 필수 파일) |
+| `validator.mjs` 정규식 패턴 | 실제 키 아님 — 안전 |
+
+### 18.2 커밋 및 Push
+- **커밋**: `5f7abb2` — `feat: VE Database SaaS Landing + Dashboard v1.0`
+- **파일**: 65 files, 21,092 insertions
+- **Remote**: `https://github.com/bignine99/ve_database_and_knowledge_graph.git`
+- **Push**: `master` → `origin/master` 완료 (2026-05-06)
+
+---
+
+## 향후 작업: Amazon Lightsail 프로덕션 배포 <a id="next-lightsail"></a>
+
+> **상태**: Lightsail 마이그레이션 작업 완료 후 진행 예정
+> **서버**: ninetynine99.co.kr (Amazon Lightsail)
+> **GitHub**: https://github.com/bignine99/ve_database_and_knowledge_graph.git
+
+### Step 1: 서버 환경 구성
+```bash
+# 1-1. 프로젝트 클론
+cd /opt
+git clone https://github.com/bignine99/ve_database_and_knowledge_graph.git ve_database
+cd ve_database
+
+# 1-2. Python 가상환경 + 의존성
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+pip install gunicorn
+
+# 1-3. 환경변수 (.env 생성)
+# SUPABASE_DB_HOST, SUPABASE_DB_PORT, SUPABASE_DB_NAME,
+# SUPABASE_DB_USER, SUPABASE_DB_PASS, GEMINI_API_KEY
+```
+
+### Step 2: 데이터 파이프라인 실행 (서버에서)
+```bash
+# 2-1. 원본 PDF 업로드 (.raw_data/)
+# 2-2. 배치 추출 실행
+python -m src.batch_processor
+# 2-3. DB 적재
+python -m src.db_builder
+# 2-4. KG 재구축
+python -m src.kg_builder
+```
+
+### Step 3: Gunicorn + PM2 서비스 등록
+```bash
+# 3-1. PM2로 Gunicorn 실행
+pm2 start "gunicorn -w 4 -b 127.0.0.1:5001 src.app:app" --name ve-dashboard
+pm2 save
+
+# 3-2. Nginx 리버스 프록시
+# /etc/nginx/sites-available/ve-dashboard
+# server_name ve.ninetynine99.co.kr;
+# location / { proxy_pass http://127.0.0.1:5001; }
+```
+
+### Step 4: SSL + 도메인
+```bash
+# 4-1. DNS A 레코드: ve.ninetynine99.co.kr → Lightsail IP
+# 4-2. Certbot SSL
+sudo certbot --nginx -d ve.ninetynine99.co.kr
+```
+
+### Step 5: 검증 체크리스트
+- [ ] `https://ve.ninetynine99.co.kr/` — 랜딩 페이지 로드
+- [ ] `https://ve.ninetynine99.co.kr/dashboard` — 대시보드 KPI 데이터 표시
+- [ ] `/api/stats` — JSON 응답 확인
+- [ ] `/api/kg/query?q=옥상 방수` — KG hop 질의 응답
+- [ ] Knowledge Graph 인터랙티브 뷰어 동작
+- [ ] AI VE 자문 페이지 동작
 
 ---
 
@@ -387,38 +610,51 @@ for i in range(pages):
 
 ---
 
-## 파일 구조
+## 파일 구조 (2026-05-06 기준)
 
 ```
 260504_ve_database_development/
-├── .env                          # Supabase 연결 정보
-├── .raw_data/                    # 원본 PDF 파일
-│   ├── 001_강원특별자치도_*.pdf
-│   ├── 002_국가철도공단_*.pdf
-│   ├── 003_대구광역시_*.pdf
-│   ├── 004_조달청_*.pdf
-│   ├── 005_퇴계동_*_건축/구조/기계/전기/토목.pdf
-│   ├── 006_한경대학교_*_건축/구조/기계/전기/조경/토목.pdf
-│   ├── 007_왕산2초중통합신축_*.pdf
-│   └── 008_화곡초등학교_*.pdf
+├── .env                          # Supabase + Gemini 환경변수 (gitignore)
+├── .gitignore                    # 보안/대용량 파일 제외 규칙
+├── requirements.txt              # Python 의존성
+├── .raw_data/                    # 원본 PDF 파일 (gitignore)
 ├── src/
-│   ├── app.py                    # Flask 메인 앱
-│   ├── cube_taxonomy.py          # CUBE 분류 엔진
-│   ├── extract_001.py ~ 003.py   # 초기 추출기 (세션 1)
-│   ├── extract_004.py            # 대구 OCR 추출기
-│   ├── extract_005.py            # 조달청 추출기
-│   ├── extract_006.py            # 퇴계동 추출기
-│   ├── extract_007.py            # 한경대 추출기
-│   ├── extract_008.py            # 왕산 추출기
-│   ├── extract_009.py            # 화곡 추출기
+│   ├── app.py                    # Flask 메인 앱 (Supabase PostgreSQL)
+│   ├── config.py                 # 경로/DB 설정
+│   ├── cube_taxonomy.py          # CUBE 3축 분류 엔진 (WHERE/WHAT/HOW)
+│   ├── kg_builder.py             # KG v2 — CUBE 기반 (10노드, 8엣지 타입)
+│   ├── kg_visualizer.py          # KG 시각화 (matplotlib + vis-network)
+│   ├── ai_enhancer.py            # Gemini 2.0 Flash AI 서술 + 교차검증
+│   ├── text_extractor.py         # PyMuPDF 좌표 기반 텍스트 추출
+│   ├── table_extractor.py        # pdfplumber 테이블 추출
+│   ├── image_extractor.py        # PDF 이미지 추출
+│   ├── pipeline.py               # 통합 추출 파이프라인
+│   ├── batch_processor.py        # 전체 배치 처리기
+│   ├── db_builder.py             # JSON → SQLite/PostgreSQL 적재
+│   ├── pdf_processor.py          # PDF 전처리 유틸리티
+│   ├── schemas.py                # JSON 스키마 검증
+│   ├── schema.sql                # DB 스키마 DDL
+│   ├── setup_supabase.py         # Supabase 테이블 생성
+│   ├── migrate_to_supabase.py    # SQLite → Supabase 마이그레이션
+│   ├── extract_002~009.py        # 개별 PDF 추출기 (8개)
 │   ├── templates/
-│   │   ├── landing.html          # 히어로 랜딩 페이지 (작성 중)
-│   │   └── index.html            # 대시보드 메인
+│   │   ├── landing.html          # WebGL 히어로 랜딩 페이지
+│   │   └── index.html            # SPA 대시보드 (6페이지)
 │   └── static/
-│       ├── css/dashboard.css
-│       └── js/dashboard.js
+│       ├── css/dashboard.css     # SaaS 디자인 시스템
+│       ├── js/dashboard.js       # 차트 + KG + AI 자문 로직
+│       └── images/               # 랜딩 페이지 이미지
 ├── data/
-│   ├── extracted_001/ ~ 009/     # 추출 JSON 파일
-│   └── kg/                       # Knowledge Graph 데이터
-└── implementation_and_modification_processes.md  # 이 문서
+│   ├── extracted/ ~ extracted_009/  # 추출 JSON (gitignore)
+│   ├── images/ ~ images_002/       # 추출 이미지 (gitignore)
+│   ├── db/                         # SQLite DB (gitignore)
+│   └── kg/                         # Knowledge Graph (git 추적)
+│       ├── ve_knowledge_graph.graphml
+│       ├── kg_stats.json
+│       ├── kg_interactive_viewer.html
+│       └── *.png (시각화 차트 3개)
+├── docs/
+│   ├── PRD_implementation_plan.md
+│   └── implementation_and_modification_processes.md
+└── implementation_and_modification_processes.md  # 이 문서 (루트 복사본)
 ```
