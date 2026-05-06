@@ -1,7 +1,23 @@
+# ── Core Web Framework ──
+flask>=3.0.0
+gunicorn>=21.2.0
+python-dotenv>=1.0.0
+
+# ── Database ──
+psycopg2-binary>=2.9.9
+
+# ── PDF Processing ──
 pdfplumber>=0.10.0
 PyMuPDF>=1.23.0
 Pillow>=10.0.0
+
+# ── Knowledge Graph ──
 networkx>=3.2
 matplotlib>=3.8.0
-pytest>=7.4.0
+
+# ── AI Enhancement ──
+google-generativeai>=0.5.0
+
+# ── Utilities ──
 tqdm>=4.66.0
+pytest>=7.4.0
