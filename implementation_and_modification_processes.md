@@ -28,8 +28,9 @@
 17. [Phase 17: Flask 종합 대시보드](#phase-17)
 18. [Phase 18: Git 배포 준비](#phase-18)
 19. [Phase 19: Amazon Lightsail 프로덕션 배포](#next-lightsail)
-20. [최종 데이터베이스 현황](#final-status)
-21. [기술적 교훈 및 시행착오 기록](#lessons-learned)
+20. [Phase 20: 프로덕션 마감 — DNS, UI, 솔루션 연동](#phase-20)
+21. [최종 데이터베이스 현황](#final-status)
+22. [기술적 교훈 및 시행착오 기록](#lessons-learned)
 
 ---
 
@@ -532,6 +533,55 @@ sudo certbot --nginx -d ve.ninetynine99.co.kr --non-interactive --agree-tos
 - [x] `/api/stats` — JSON 응답 200 OK
 - [x] `/api/kg/data` — KG 데이터 200 OK
 - [x] SSL 인증서 유효 (Let's Encrypt, 만료: 2026-08-04)
+
+---
+
+## Phase 20: 프로덕션 마감 — DNS, UI, 솔루션 연동 <a id="phase-20"></a>
+
+> **상태**: ✅ 완료 (2026-05-06)
+> **커밋**: `80c892b` (비밀번호 바이패스), `f579ec5` (홈 버튼)
+
+### 20.1 와일드카드 DNS 설정
+- **문제**: 새 서비스 배포마다 가비아 DNS에 개별 A 레코드를 추가해야 하는 번거로움
+- **해결**: `*.ninetynine99.co.kr → 43.203.182.190` 와일드카드 A 레코드 등록 (TTL 600)
+- **효과**: 향후 모든 서브도메인이 자동으로 서버 IP를 가리킴. DNS 작업 영구 불필요
+- **Certbot SSL 발급**: `sudo certbot --nginx -d ve.ninetynine99.co.kr --non-interactive --agree-tos`
+- **인증서 만료**: 2026-08-04 (자동 갱신 설정됨)
+
+### 20.2 비밀번호 게이트 바이패스
+- **배경**: 현재 맛보기(Preview) 단계로 누구나 대시보드를 볼 수 있어야 함
+- **구현**: `landing.html` 내 `BYPASS_PASSWORD = true` 플래그 추가
+  - `true`: "ENTER DASHBOARD" 클릭 시 바로 `/dashboard` 이동
+  - `false`: 기존 비밀번호 모달(`0172`) 동작 복원
+- **보존**: 비밀번호 모달 HTML/CSS/JS 코드 전체 보존 (향후 재활성화 가능)
+
+```javascript
+// landing.html — 복원 방법: false로 변경
+var BYPASS_PASSWORD = true;
+```
+
+### 20.3 회사 홈페이지 링크 버튼
+- **위치**: 랜딩 페이지 좌측 상단 고정(fixed)
+- **디자인**: Navy 배경 + 글래스모피즘 + 집 아이콘 + "NINETYNINE" 텍스트
+- **동작**: 클릭 시 `https://www.ninetynine99.co.kr/` 새 탭 오픈
+- **호버**: `var(--accent)` 파란색 전환 + 그림자 효과
+- **파일**: `landing.html` (HTML), `landing.css` (`.home-link` 클래스)
+
+### 20.4 솔루션 페이지 카드 추가
+- **대상**: `https://ninetynine99.co.kr/solutions` (회사 홈페이지 솔루션 갤러리)
+- **파일**: `/home/ubuntu/homepage/src/data/solutions.ts`
+- **추가된 카드**:
+
+| 항목 | 값 |
+|---|---|
+| ID | `solution-ve-database` |
+| 제목 | Value Engineering by AI |
+| 설명 | AI 기반 VE 데이터베이스 및 분석 대시보드 |
+| 카테고리 | Construction / RAG |
+| 링크 | https://ve.ninetynine99.co.kr/ |
+| 배지 | NEW |
+
+- **배포**: `npm run build` → `pm2 restart ninetynine-hub`
 
 ---
 
