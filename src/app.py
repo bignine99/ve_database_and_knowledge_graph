@@ -407,9 +407,22 @@ def serve_image(filename):
 
 @app.route("/api/serve_abs_image")
 def serve_abs_image():
-    """절대 경로 이미지 서빙."""
+    """절대 경로 이미지 서빙 — Windows 개발 경로를 서버 경로로 자동 매핑."""
     fpath = request.args.get("path", "")
     p = Path(fpath)
+
+    # DB에 저장된 Windows 절대 경로를 Linux 서버 경로로 매핑
+    if not p.exists() and ('\\' in fpath or 'C:' in fpath):
+        # Windows 경로에서 'data/images/' 이후 부분 추출
+        normalized = fpath.replace('\\', '/')
+        marker = 'data/images/'
+        idx = normalized.find(marker)
+        if idx >= 0:
+            relative = normalized[idx:]  # e.g. "data/images/대안_02/대안_02_original_diagram.jpeg"
+            server_path = Path('/home/ubuntu/ve_database') / relative
+            if server_path.exists():
+                return send_from_directory(str(server_path.parent), server_path.name)
+
     if p.exists():
         return send_from_directory(str(p.parent), p.name)
     return "Not found", 404
