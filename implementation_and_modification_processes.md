@@ -1037,3 +1037,15 @@ Step 6: 🎩 VE Leader       — 종합 정리 + 다음 단계 제안
 ### 24.3 Flask 로컬 서버 중단 트러블슈팅
 - **문제점**: 작업 중 포트 오류 혹은 IDE 세션 만료로 Flask 서버(`:5000`)가 중단되어 대시보드 접근 불가 현상 발생.
 - **해결 방안**: `netstat -ano | findstr :5000`을 통해 포트 비활성을 확인 후, `python src/app.py`를 재기동하여 서비스 접근 및 이미지 매핑 테스트 환경 복구 완료.
+
+
+### Phase 25: Image Deployment Pathing and Layout Stability (2026-05-07)
+**Issue 1: Blank UI for vis.Network Canvas**
+- **Symptoms**: The Hybrid RAG 시각화 container on the dashboard was entirely blank. Inspection revealed that the <canvas> injected by is.Network was forcing a CSS feedback loop in a flexbox layout, causing the container's height to expand infinitely (reaching 22,000px+ without visibility).
+- **Fix applied**: Wrapped #ai-kg-container inside a relative lex: 1; min-height: 500px; wrapper, and set the container itself to position: absolute; top:0; left:0; right:0; bottom:0;. This breaks the infinite loop and explicitly forces the graph canvas to conform to the parent dimensions.
+
+**Issue 2: Broken Original Images in Modal (Mixed Paths on Linux)**
+- **Symptoms**: The user reported that original diagram images (e.g. alternative 428) were not displaying on the live dashboard.
+- **Root Cause**: The zip file (images.zip) containing the newly extracted robust images (from Phase 24) was created on Windows using Compress-Archive. When extracted on the AWS Linux server using unzip, Linux failed to recognize backslashes as path separators, resulting in files named with literal backslashes (e.g., pps_428\\pps_428_original_diagram.jpeg) instead of placing them in subdirectories. The backend API (pp.py), attempting to read within the subdirectories (server_path.exists()), failed to find the files and fell back to returning 404 NOT FOUND.
+- **Fix applied**: Created and executed a Python script on the remote AWS server to iterate through all files containing \\ in their name. The script dynamically created the required subdirectories (pps_428/ etc.) and moved the files, fixing 737 erroneously named assets.
+- **Verification**: Verified via curl that serve_abs_image now accurately serves the 200 OK responses, successfully linking Windows-stored DB paths to the resolved Linux directory structure.
