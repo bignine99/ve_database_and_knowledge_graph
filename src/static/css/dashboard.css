@@ -348,6 +348,7 @@ body {
 .chat-panel {
   background: var(--color-bg); border: 1px solid var(--color-border);
   border-radius: 2px; padding: 20px;
+  display: flex; flex-direction: column;
 }
 .chat-input-area { display: flex; gap: 8px; margin-bottom: 16px; }
 .chat-input {
@@ -381,7 +382,7 @@ body {
 .chat-response .result-card .path { font-size: 11px; color: var(--color-accent); font-family: var(--font-en); }
 .chat-response .result-card .meta { font-size: 11px; color: var(--color-text-secondary); margin-top: 4px; }
 
-#ai-kg-container { width: 100%; height: 400px; border: 1px solid var(--color-border); border-radius: 2px; }
+#ai-kg-container { width: 100%; flex: 1; min-height: 500px; border: 1px solid var(--color-border); border-radius: 2px; }
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 4px; }
@@ -390,3 +391,32 @@ body {
 
 /* ── ANIMATIONS ── */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── LCC Analysis ── */
+.lcc-label {
+  font-size: 11px; font-weight: 600; color: var(--color-text-secondary);
+  display: block; margin-bottom: 4px;
+}
+.lcc-input {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--color-border-mid);
+  border-radius: 4px; font-size: 12px; font-family: var(--font-kr);
+  outline: none; transition: border-color 0.15s;
+}
+.lcc-input:focus { border-color: var(--color-accent); }
+.lcc-cell {
+  width: 100%; padding: 5px 6px; border: 1px solid var(--color-border-mid);
+  border-radius: 3px; font-size: 11px; font-family: var(--font-en);
+  text-align: right; outline: none; transition: border-color 0.15s;
+}
+.lcc-cell:focus { border-color: var(--color-accent); }
+
+/* ── Project Compare ── */
+.cmp-select {
+  padding: 7px 10px; border: 1px solid var(--color-border-mid);
+  border-radius: 4px; font-size: 11px; font-family: var(--font-kr);
+  background: #fff; min-width: 180px; outline: none;
+  transition: border-color 0.15s;
+}
+.cmp-select:focus { border-color: var(--color-accent); }
+
+

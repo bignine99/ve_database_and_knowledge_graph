@@ -642,3 +642,386 @@ ALTERNATIVE_SCHEMA = {
 | | 8.3 AI 자문 | Task 28 | AI VE 자문 + KG Hop 시각화 |
 
 **총 28개 Task** — Phase 1-8 완료. Phase 7(CUBE Ontology) + Phase 8(Flask Dashboard) 구현 완료.
+
+---
+---
+
+## Phase 9: Multi-Agent VE Intelligence — VE 자동화 에이전트 시스템
+
+> **전제 조건**: 도면 분석 AI (별도 팀 개발), 내역/비용 분석 AI (별도 개발) 결과를 
+> JSON 인터페이스로 제공받는다. 본 시스템은 이 데이터를 소비하여 VE 분석을 수행한다.
+
+### 9.0 설계 원칙
+
+| 원칙 | 설명 |
+|---|---|
+| **AI가 잘하는 것에 집중** | 유사 사례 검색, 패턴 기반 힌트, 보고서 초안 생성 |
+| **AI가 못하는 것은 외부 의존** | 도면 해석(도면 AI), 비용 산출(내역 AI) |
+| **사람이 최종 판단** | AI는 초안+근거 제공, 엔지니어가 수정+확정 |
+| **기존 ML 인프라 최대 활용** | Tier 1~4 (시맨틱 검색, Hybrid RAG, SVM 분류, K-Means 클러스터) |
+
+### 9.1 시스템 아키텍처
+
+```
+외부 입력
+┌─────────────────────────────────────────────────┐
+│  [도면 AI] → design_analysis.json               │
+│    - 구조 부재 목록, 사양, 과잉설계 지적         │
+│    - 설비 시스템 구성, 용량                       │
+│                                                   │
+│  [내역 AI] → cost_breakdown.json                 │
+│    - 공종별 비용 내역, 단가, 물량                 │
+│    - 비용 비중 상위 항목                          │
+│                                                   │
+│  [사용자] → project_brief.json                   │
+│    - 프로젝트명, 용도, 규모, VE 목표              │
+│    - 관심 공종, 제약 조건                         │
+└─────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────┐
+│              VE Leader (오케스트레이터)            │
+│                                                   │
+│  Step 1: 입력 파싱 + 분석 대상 선정               │
+│  Step 2: FAST Agent → 기능 분해                   │
+│  Step 3: DB 검색 Agent → 유사 사례 Top-K          │
+│  Step 4: Idea Agent → 아이디어 도출               │
+│  Step 5: Domain Agent(s) → 기술 검증 (병렬)       │
+│  Step 6: Report Agent → 대안 보고서 초안          │
+│                                                   │
+│  ※ 각 Step 결과는 표준 JSON으로 다음 Step에 전달  │
+└─────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────┐
+│              출력: VE 대안 보고서 초안             │
+│                                                   │
+│  - 기능 분석 요약 (FAST)                          │
+│  - 유사 사례 근거 (DB 727건 기반)                 │
+│  - VE 아이디어 목록 (우선순위 포함)               │
+│  - 도메인별 기술 검증 의견                        │
+│  - 비용 절감 추정 (내역 AI 데이터 기반)           │
+│                                                   │
+│  ※ 엔지니어가 검토/수정 후 최종 확정              │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+### Step 9.1: 외부 인터페이스 스키마 정의
+
+#### Task 29: 입력 JSON 인터페이스 설계
+
+**Files:**
+- Create: `src/agents/schemas.py`
+- Create: `src/agents/__init__.py`
+
+- [ ] **29-1.** `ProjectBrief` 스키마 — 프로젝트 기본 정보
+  ```python
+  {
+    "project_name": str,
+    "project_type": str,       # "공동주택" | "학교" | "청사" | ...
+    "total_area": float,       # 연면적 (㎡)
+    "total_cost": float,       # 총 공사비 (백만원)
+    "ve_target_rate": float,   # VE 목표 절감율 (%)
+    "focus_disciplines": list, # ["건축", "전기", "기계설비"]
+    "constraints": list,       # ["공기 변경 불가", "미관 유지"]
+  }
+  ```
+- [ ] **29-2.** `DesignAnalysis` 스키마 — 도면 AI 출력 수신
+  ```python
+  {
+    "elements": [
+      {
+        "discipline": str,        # "건축" | "토목" | "전기" | ...
+        "element_name": str,      # "옥상 방수층"
+        "current_spec": str,      # "우레탄 도막방수 T=3mm"
+        "quantity": str,          # "2,500㎡"
+        "flags": list,            # ["과잉설계", "고비용"]
+      }
+    ]
+  }
+  ```
+- [ ] **29-3.** `CostBreakdown` 스키마 — 내역 AI 출력 수신
+  ```python
+  {
+    "items": [
+      {
+        "discipline": str,
+        "work_type": str,         # "방수코킹공사"
+        "item_name": str,         # "우레탄 도막방수"
+        "unit_cost": float,
+        "quantity": float,
+        "total_cost": float,
+        "cost_ratio": float,      # 전체 대비 비중 (%)
+      }
+    ],
+    "top_cost_items": list,       # 비용 상위 20개 항목
+  }
+  ```
+- [ ] **29-4.** Pydantic 모델로 입력 검증 + 기본값 처리 구현
+
+---
+
+#### Task 30: Agent 간 내부 인터페이스 설계
+
+**Files:**
+- Create: `src/agents/interfaces.py`
+
+- [ ] **30-1.** `AgentRequest` 기본 클래스 — 모든 Agent 호출의 공통 입력
+  ```python
+  {
+    "session_id": str,
+    "step_number": int,
+    "project_brief": ProjectBrief,
+    "previous_results": dict,    # 이전 Step 결과 참조
+  }
+  ```
+- [ ] **30-2.** `AgentResponse` 기본 클래스 — 모든 Agent 출력의 공통 형식
+  ```python
+  {
+    "agent_name": str,
+    "step_number": int,
+    "status": "success" | "partial" | "failed",
+    "confidence": float,          # 0.0 ~ 1.0
+    "result": dict,               # Agent별 상세 결과
+    "references": list,           # 근거 대안 번호 목록
+    "warnings": list,             # 주의사항
+    "next_agents": list,          # 다음에 호출할 Agent 제안
+  }
+  ```
+- [ ] **30-3.** Step별 결과 스키마 정의:
+  - `FastAnalysisResult` — 기능 분해 + 기능-비용 매핑
+  - `SimilarCaseResult` — 유사 사례 검색 결과 (Tier 1~4 활용)
+  - `IdeaListResult` — 아이디어 목록 + 우선순위 스코어
+  - `DomainReviewResult` — 도메인별 기술 검증 의견
+  - `ReportDraftResult` — 최종 보고서 초안
+
+---
+
+### Step 9.2: VE Leader 오케스트레이터
+
+#### Task 31: VE Leader 코어 구현
+
+**Files:**
+- Create: `src/agents/ve_leader.py`
+
+- [ ] **31-1.** `VELeader` 클래스 — 세션 관리 + 워크플로 제어
+  ```python
+  class VELeader:
+      def run_session(self, brief, design=None, cost=None) -> ReportDraft:
+          # Step 1: 입력 파싱 + 분석 대상 선정
+          targets = self._select_targets(brief, design, cost)
+          
+          # Step 2: 유사 사례 검색 (기존 ML 인프라 활용)
+          similar = self._search_similar_cases(targets)
+          
+          # Step 3: 아이디어 도출 (Idea Agent)
+          ideas = self._generate_ideas(targets, similar)
+          
+          # Step 4: 도메인 검증 (해당 도메인 Agent 병렬 호출)
+          reviews = self._domain_review(ideas, targets)
+          
+          # Step 5: 보고서 초안 생성
+          report = self._generate_report(brief, similar, ideas, reviews)
+          
+          return report
+  ```
+- [ ] **31-2.** `_select_targets()` — 분석 대상 자동 선정 로직
+  - 비용 비중 상위 N개 공종 추출
+  - 도면 AI가 "과잉설계" 플래그한 항목 우선
+  - 사용자 focus_disciplines 필터링
+- [ ] **31-3.** `_search_similar_cases()` — 기존 Tier 1~4 연동
+  - 각 target에 대해 시맨틱 검색 Top-5
+  - ML 자동 분류 (HOW1/HOW2/ValueType)
+  - 해당 클러스터의 평균 절감율/가치변화 참조
+- [ ] **31-4.** 세션 상태 관리 (진행률, 각 Step 결과 저장)
+- [ ] **31-5.** 에러 핸들링 — 외부 데이터 없을 때 graceful degradation
+  - 도면 AI 없으면 → 사용자 입력 기반으로만 진행
+  - 내역 AI 없으면 → DB 통계 기반 추정치 제공
+
+---
+
+#### Task 32: DB 검색 Agent (기존 ML 래핑)
+
+**Files:**
+- Create: `src/agents/db_search_agent.py`
+
+- [ ] **32-1.** 기존 `semantic_search.py` 래핑 — AgentResponse 형식 출력
+- [ ] **32-2.** 검색 결과에 클러스터 정보 첨부 (같은 클러스터 대안 통계)
+- [ ] **32-3.** 검색 결과에 자동 분류 결과 첨부 (HOW1/HOW2/ValueType)
+- [ ] **32-4.** "유사 사례 근거 카드" JSON 생성 — 보고서에 삽입할 형태
+
+---
+
+#### Task 33: Idea Agent (아이디어 도출)
+
+**Files:**
+- Create: `src/agents/idea_agent.py`
+
+- [ ] **33-1.** Gemini 프롬프트 기반 아이디어 도출
+  - 입력: 분석 대상 + 유사 사례 Top-5 + 비용 데이터
+  - SKILL_idea_developer.md의 패턴 10개를 시스템 프롬프트로 주입
+  - temperature 0.7 (창의성 필요)
+- [ ] **33-2.** 아이디어 구조화 — 각 아이디어를 표준 JSON으로 파싱
+  ```python
+  {
+    "idea_name": str,
+    "category": str,           # "재료대체" | "공법변경" | "규격최적화" | ...
+    "current": str,            # 현재 방식
+    "proposed": str,           # 제안 대안
+    "expected_saving": str,    # "약 5~10% 절감"
+    "confidence": float,
+    "reference_cases": list,   # 근거 대안 번호
+    "risks": list,
+    "domain_review_needed": list,  # ["건축", "구조"]
+  }
+  ```
+- [ ] **33-3.** 아이디어 중복 제거 + 우선순위 자동 산정
+- [ ] **33-4.** 환각 방지 — DB에 근거 없는 아이디어는 confidence 0.3 이하 표시
+
+---
+
+#### Task 34: Domain Agent (도메인별 기술 검증)
+
+**Files:**
+- Create: `src/agents/domain_agent.py`
+
+- [ ] **34-1.** 범용 `DomainAgent` 클래스 — SKILL 파일을 동적으로 로드
+  ```python
+  class DomainAgent:
+      def __init__(self, discipline: str):
+          # .ve_SKILL/SKILL_{discipline}.md 로드
+          self.skill_prompt = load_skill(discipline)
+      
+      def review(self, idea: dict, context: dict) -> DomainReviewResult:
+          # Gemini에 SKILL prompt + idea + context 전달
+          ...
+  ```
+- [ ] **34-2.** 6개 도메인 자동 매핑:
+  - "건축" → SKILL_Architect.md
+  - "토목" → SKILL_Civil.md
+  - "전기" → SKILL_Electronic.md
+  - "기계설비" → SKILL_Mechanic.md
+  - "배관" → SKILL_Plumbing.md
+  - "조경" → SKILL_Landscape.md
+- [ ] **34-3.** 검증 결과 구조화:
+  ```python
+  {
+    "recommendation": "적극추천" | "조건부추천" | "보류" | "부적합",
+    "feasibility": float,      # 0.0 ~ 1.0
+    "code_compliance": str,    # "적합" | "재검토" | "부적합"
+    "performance_impact": str, # "개선" | "유지" | "저하"
+    "concerns": list,
+    "conditions": list,
+  }
+  ```
+- [ ] **34-4.** 병렬 호출 — 여러 도메인을 asyncio로 동시 검증
+
+---
+
+#### Task 35: FAST Agent (기능 분석)
+
+**Files:**
+- Create: `src/agents/fast_agent.py`
+
+- [ ] **35-1.** SKILL_FAST_Diagram_Developer.md 기반 프롬프트 구성
+- [ ] **35-2.** 기능 분해 결과를 트리 JSON으로 구조화
+  ```python
+  {
+    "project_goal": str,
+    "functions": [
+      {
+        "level": 0,
+        "name": str,
+        "type": "primary" | "secondary" | "tertiary",
+        "children": [...],
+        "cost_allocation": float,    # 내역 AI 데이터 연동
+        "value_ratio": float,        # 비용 대비 가치
+      }
+    ]
+  }
+  ```
+- [ ] **35-3.** 기능-비용 불균형 자동 식별 (고비용 저가치 영역)
+- [ ] **35-4.** (선택) Mermaid 다이어그램 자동 생성
+
+---
+
+#### Task 36: Report Agent (보고서 초안 생성)
+
+**Files:**
+- Create: `src/agents/report_agent.py`
+
+- [ ] **36-1.** 전체 워크플로 결과를 VE 대안 보고서 초안으로 합성
+- [ ] **36-2.** 대안별 보고서 양식:
+  ```
+  ┌──────────────────────────────────────────┐
+  │  대안 제안서 (AI 초안)                    │
+  ├──────────────────────────────────────────┤
+  │  1. 제안명: [아이디어명]                  │
+  │  2. 분류: [HOW1] / [HOW2] / [SPACE]      │
+  │  3. 원안: [현재 설계]                     │
+  │  4. 대안: [제안 변경]                     │
+  │  5. 근거 사례:                            │
+  │     - 대안 #191 (유사도 83.5%)            │
+  │     - 대안 #413 (유사도 44.2%)            │
+  │  6. 예상 효과:                            │
+  │     - 비용 절감: 약 X백만원 (DB 통계 기반)│
+  │     - 성능 변화: 유지 (도메인 검증 결과)  │
+  │  7. 기술 검증: [건축] 적극추천            │
+  │  8. 주의사항: [...]                       │
+  │  9. ⚠ AI 초안 — 엔지니어 검토 필요       │
+  └──────────────────────────────────────────┘
+  ```
+- [ ] **36-3.** Markdown + PDF 출력 지원
+- [ ] **36-4.** "AI 초안" 워터마크 — 모든 출력에 AI 생성물 표시
+
+---
+
+### Step 9.3: API 및 대시보드 통합
+
+#### Task 37: Multi-Agent API 엔드포인트
+
+**Files:**
+- Modify: `src/app.py`
+
+- [ ] **37-1.** `POST /api/ve/session` — 새 VE 세션 생성
+  - 입력: project_brief + (선택) design_analysis + cost_breakdown
+  - 출력: session_id
+- [ ] **37-2.** `GET /api/ve/session/<id>/status` — 세션 진행 상태
+- [ ] **37-3.** `GET /api/ve/session/<id>/result` — 최종 결과 조회
+- [ ] **37-4.** `POST /api/ve/session/<id>/feedback` — 사용자 피드백 저장
+
+#### Task 38: 대시보드 VE Agent 페이지
+
+**Files:**
+- Modify: `src/templates/index.html`
+- Create: `src/static/js/ve-agent.js`
+
+- [ ] **38-1.** 사이드바에 "07. VE Agent" 메뉴 추가
+- [ ] **38-2.** 프로젝트 정보 입력 폼 (JSON 직접 입력 또는 UI 폼)
+- [ ] **38-3.** 실시간 진행 상태 표시 (Step 1~6 프로그레스)
+- [ ] **38-4.** 결과 뷰어: 아이디어 카드 + 근거 사례 + 도메인 검증 표시
+- [ ] **38-5.** 보고서 다운로드 (Markdown/PDF)
+
+---
+
+### Execution Summary (Phase 9 추가)
+
+| Phase | Step | Tasks | 핵심 산출물 |
+|---|---|---|---|
+| **9. Multi-Agent** | 9.1 인터페이스 | Task 29-30 | 입출력 스키마, Agent 통신 규격 |
+| | 9.2 Agent 구현 | Task 31-36 | VE Leader, 5개 Agent |
+| | 9.3 통합 | Task 37-38 | API 엔드포인트, 대시보드 UI |
+
+**총 10개 Task (Task 29~38)** — Phase 9 구현 시 기존 Tier 1~4 ML 인프라를 최대 활용.
+
+### 구현 우선순위
+
+| 순서 | Task | 이유 |
+|---|---|---|
+| **1차** | Task 29-30 (스키마) | 모든 Agent의 기반 |
+| **2차** | Task 31 (VE Leader) + Task 32 (DB Search) | 핵심 오케스트레이터 + 기존 ML 래핑 |
+| **3차** | Task 33 (Idea) + Task 34 (Domain) | 실제 VE 가치 생산 |
+| **4차** | Task 35 (FAST) + Task 36 (Report) | 보고서 완성도 |
+| **5차** | Task 37-38 (API + UI) | 사용자 인터페이스 |

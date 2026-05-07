@@ -62,8 +62,8 @@
 
   <p class="hero-sub">
     30,000+ VE 사례 원시정보를 추출, 정규화하여 구축한 통합 데이터베이스.
-    CUBE기반 데이터모델링, Knowledge Graph 기반 성능-비용-가치 분석을 제공합니다.
-    AI에게 문의하면 성능은 올리고, 가격을 낮추어 드립니다.
+    CUBE기반 데이터모델링, Knowledge Graph, 그리고 <strong style="color:#3B82F6;">ML 시맨틱 검색 엔진</strong>으로
+    성능은 올리고, 가격을 낮추어 드립니다.
   </p>
 
   <button class="hero-cta" id="btn-enter" type="button">
@@ -152,8 +152,8 @@
       <div class="feature-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
       </div>
-      <h3>AI VE 자문 시스템</h3>
-      <p>Gemini 2.0 Flash 기반의 AI 자문 엔진이 VE 데이터베이스를 참조하여 건설 프로젝트 특화 질의응답을 제공합니다. Hybrid RAG 기술로 정확한 근거 기반 답변을 생성합니다.</p>
+      <h3>ML Hybrid RAG 자문 시스템</h3>
+      <p>Sentence-Transformers 임베딩 + Knowledge Graph 구조 매칭 + Gemini 2.0 Flash를 결합한 Hybrid RAG 엔진. 자연어 질의로 727건에서 최적 대안을 0.07초 내에 검색합니다.</p>
     </div>
   </div>
 </div>
@@ -299,20 +299,21 @@
     </div>
   </div>
 
-  <!-- Row 2: Image RIGHT — 근거 기반 AI 자문 -->
+  <!-- Row 2: Image RIGHT — ML Hybrid RAG -->
   <div class="img-row img-row-reverse reveal">
     <div class="img-row-media">
-      <img src="/static/images/근거 기반 AI 자문.jpeg" alt="근거 기반 AI 자문" loading="lazy">
+      <img src="/static/images/근거 기반 AI 자문.jpeg" alt="ML Hybrid RAG Engine" loading="lazy">
     </div>
     <div class="img-row-text">
-      <span class="tag font-outfit">Hybrid RAG</span>
-      <h4>근거 기반 AI 자문</h4>
-      <p>FAISS 벡터 검색과 Knowledge Graph 구조 검색을 결합하여, 단순 키워드 매칭을 넘어선 맥락 이해 기반의 답변을 생성합니다.</p>
+      <span class="tag font-outfit">ML Hybrid RAG</span>
+      <h4>ML 시맨틱 검색 + 근거 기반 AI 자문</h4>
+      <p>Sentence-Transformers 384차원 임베딩과 Knowledge Graph 구조 매칭을 <strong>0.6:0.4 복합 스코어</strong>로 결합. 키워드 매칭 0건이던 자연어 질의도 정확한 대안을 검색합니다.</p>
       <ul>
-        <li>Gemini 2.0 Flash LLM 엔진</li>
-        <li>FAISS 임베딩 + KG 구조 검색</li>
-        <li>출처 추적 (Source Citation)</li>
-        <li>건설 VE 특화 프롬프트 엔진</li>
+        <li>MiniLM-L12-v2 다국어 임베딩 (384차원)</li>
+        <li>코사인 유사도 + KG Hop 복합 스코어링</li>
+        <li>Gemini 2.0 Flash — 환각 방지 프롬프트 (temperature 0.3)</li>
+        <li>TF-IDF + SVM 자동 분류 (HOW1 58% / ValueType 67%)</li>
+        <li>K-Means 8클러스터 자동 군집화 인사이트</li>
       </ul>
     </div>
   </div>
@@ -364,6 +365,47 @@
     </div>
   </div>
 </div>
+
+
+<!-- ═══════════════════════════════════════
+     SECTION 6: ML INTELLIGENCE METRICS
+     ═══════════════════════════════════════ -->
+<section class="navy-block">
+  <div class="deco-circle"></div>
+  <div class="deco-circle"></div>
+
+  <div class="navy-inner reveal">
+    <div class="section-label font-outfit">Machine Learning Enhancement</div>
+    <h2 class="section-title">ML 도입으로 달라진 VE 자문 엔진</h2>
+    <p class="section-desc">
+      키워드 사전 검색기에서 의미 이해 기반 지능형 자문 엔진으로 전환.
+      4개 Tier ML 파이프라인이 검색 정확도와 분류 자동화를 혁신합니다.
+    </p>
+
+    <div class="navy-grid">
+      <div class="navy-card">
+        <div class="card-num font-outfit">TIER 1 / SEMANTIC</div>
+        <h4>Embedding 시맨틱 검색</h4>
+        <p>384차원 벡터 공간에서 코사인 유사도 기반 의미 검색. "지붕 물 새는 문제" → "옥상 방수 공법" 자동 매칭. 키워드 외 질의 처리율 <strong style="color:#3B82F6;">0% → 100%</strong>.</p>
+      </div>
+      <div class="navy-card">
+        <div class="card-num font-outfit">TIER 2 / HYBRID RAG</div>
+        <h4>복합 스코어 + Gemini RAG</h4>
+        <p>Embedding(60%) + KG 구조(40%) 복합 재정렬. Gemini 2.0 Flash가 환각 방지 프롬프트로 데이터 기반 분석 답변을 생성합니다. 응답 시간 <strong style="color:#3B82F6;">0.07초</strong>.</p>
+      </div>
+      <div class="navy-card">
+        <div class="card-num font-outfit">TIER 3 / CLASSIFIER</div>
+        <h4>자동 분류 ML</h4>
+        <p>TF-IDF + CalibratedSVM으로 HOW1 대분류(6클래스) <strong style="color:#3B82F6;">58%</strong>, ValueType(4클래스) <strong style="color:#3B82F6;">67%</strong> 정확도. 신뢰도 임계값 35% + Top-3 후보 반환으로 안전성 확보.</p>
+      </div>
+      <div class="navy-card">
+        <div class="card-num font-outfit">TIER 4 / CLUSTER</div>
+        <h4>클러스터링 인사이트</h4>
+        <p>727개 대안을 K-Means 8개 군집으로 자동 분류. 최대 클러스터: 철근콘크리트/구조체(141건, 가치변화 <strong style="color:#3B82F6;">+50.9%</strong>). 대시보드에서 실시간 시각화.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
 
 <!-- ═══════════════════════════════════════

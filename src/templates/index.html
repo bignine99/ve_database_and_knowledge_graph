@@ -14,8 +14,8 @@
 <!-- ══ SIDEBAR ══ -->
 <aside class="sidebar">
   <div class="sidebar-brand">
-    <h1>VE Database</h1>
-    <p>CUBE 표준분류체계 분석</p>
+    <h1>VE powered by AI</h1>
+    <p>Construction Value Engineering</p>
   </div>
   <nav class="sidebar-nav">
     <a class="nav-item active" data-page="overview" href="#">
@@ -41,6 +41,34 @@
     <a class="nav-item" data-page="performance" href="#">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
       06. 성능 분석
+    </a>
+    <a class="nav-item" data-page="veagent" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="6" r="1.5"/></svg>
+      07. VE Round Table
+    </a>
+    <a class="nav-item" data-page="report" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      08. VE 보고서
+    </a>
+    <a class="nav-item" data-page="lcc" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+      09. LCC 분석
+    </a>
+    <a class="nav-item" data-page="fast" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      10. FAST Diagram
+    </a>
+    <a class="nav-item" data-page="compare" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      11. 프로젝트 비교
+    </a>
+    <a class="nav-item" data-page="eval" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      12. 아이디어 평가
+    </a>
+    <a class="nav-item" data-page="ebook" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      13. VE E-book
     </a>
   </nav>
   <div class="sidebar-footer">
@@ -87,6 +115,11 @@
     <div class="chart-row">
       <div class="chart-card"><h3>가치 향상 Top 10</h3><canvas id="chart-value-top"></canvas></div>
       <div class="chart-card"><h3>비용 절감 효과 상위 20개</h3><canvas id="chart-savings"></canvas></div>
+    </div>
+    <!-- ML 클러스터 인사이트 -->
+    <div style="margin-top:16px;">
+      <h3 style="font-size:13px;font-weight:600;color:var(--color-navy);margin-bottom:10px;">ML Cluster Insights — Embedding 기반 자동 군집화</h3>
+      <div id="cluster-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;"></div>
     </div>
   </div>
 
@@ -185,23 +218,38 @@
     </div>
   </div>
 
-  <!-- ── PAGE 5: AI VE 자문 ── -->
+  <!-- ── PAGE 5: AI VE 자문 (Hybrid RAG) ── -->
   <div class="page" id="page-ai">
     <div class="ai-chat-container">
       <div class="chat-panel">
-        <h3 style="font-size:13px;font-weight:600;color:var(--color-navy);margin-bottom:12px;">AI VE 자문 검색</h3>
+        <h3 style="font-size:13px;font-weight:600;color:var(--color-navy);margin-bottom:4px;">AI VE 자문 — Hybrid RAG Engine</h3>
+        <p style="font-size:10px;color:var(--color-text-muted);margin-bottom:12px;">Embedding 시맨틱 검색 + Knowledge Graph 구조 매칭 + Gemini AI 분석</p>
         <div class="chat-input-area">
-          <input type="text" class="chat-input" id="ai-query" placeholder="예: 옥상 방수공사에 적용 가능한 VE item은?" value="옥상 방수공사에 적용 가능한 VE item은?">
+          <input type="text" class="chat-input" id="ai-query" placeholder="자연어로 자유롭게 질문하세요 (예: 학교 건물 외벽 에너지 효율 개선 방법)" value="옥상 방수공사에 적용 가능한 VE item은?">
           <button class="chat-btn" id="ai-search-btn">검색</button>
         </div>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;">
+          <select id="ai-mode" style="font-size:11px;padding:4px 8px;border:1px solid var(--color-border-mid);border-radius:3px;">
+            <option value="hybrid" selected>Hybrid (Embedding + KG)</option>
+            <option value="semantic">Embedding Only</option>
+            <option value="kg">KG Hop Only (Legacy)</option>
+          </select>
+          <label style="font-size:11px;color:var(--color-text-secondary);cursor:pointer;display:flex;align-items:center;gap:4px;">
+            <input type="checkbox" id="ai-gemini-toggle" style="accent-color:var(--color-accent);"> Gemini AI 분석 답변
+          </label>
+          <span style="font-size:10px;color:var(--color-text-muted);margin-left:auto;" id="ai-search-time"></span>
+        </div>
+        <!-- Gemini AI 분석 답변 -->
+        <div id="ai-gemini-answer" style="display:none;margin-top:12px;background:var(--bg-secondary);border:1px solid var(--color-border);border-radius:4px;padding:14px;font-size:12px;line-height:1.7;color:var(--color-text-primary);"></div>
+        <!-- 검색 결과 -->
         <div class="chat-response" id="ai-response">
           <p style="color:var(--color-text-muted);text-align:center;padding:60px 0;">
-            질의어를 입력하고 검색 버튼을 누르면<br>지식 그래프에서 관련 VE 대안을 탐색합니다.
+            자연어로 질의하면 727개 VE 대안에서<br>의미 기반 검색 + 구조 기반 매칭으로 최적 대안을 찾아드립니다.
           </p>
         </div>
       </div>
       <div class="chat-panel">
-        <h3 style="font-size:13px;font-weight:600;color:var(--color-navy);margin-bottom:12px;">KG Hop 시각화</h3>
+        <h3 style="font-size:13px;font-weight:600;color:var(--color-navy);margin-bottom:12px;">Hybrid RAG 시각화</h3>
         <div id="ai-kg-container"></div>
       </div>
     </div>
@@ -220,6 +268,371 @@
     </div>
   </div>
 
+  <!-- ── PAGE 7: VE Agent (Roundtable) ── -->
+  <div class="page" id="page-veagent">
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:0;height:calc(100vh - 100px);">
+      <!-- 좌측: 입력 패널 -->
+      <div style="background:#f8fafc;border-right:1px solid var(--color-border);padding:20px;overflow-y:auto;">
+        <h3 style="font-size:14px;font-weight:700;color:var(--color-navy);margin-bottom:16px;">VE Multiple Agents</h3>
+        <!-- 프로젝트명 (최상위) -->
+        <label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px;">프로젝트명</label>
+        <input type="text" id="rt-project-name" placeholder="프로젝트명을 입력하세요" value="" style="width:100%;padding:10px 12px;border:1px solid var(--color-border-mid);border-radius:6px;font-size:12px;font-weight:600;color:var(--color-navy);background:#fff;margin-bottom:16px;">
+        <!-- 파일 업로드 -->
+        <div id="rt-upload-zone" style="border:2px dashed var(--color-border-mid);border-radius:8px;padding:24px 12px;text-align:center;cursor:pointer;transition:border-color 0.2s;margin-bottom:14px;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" style="margin-bottom:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p style="font-size:11px;color:var(--color-text-muted);margin:0;">PDF 또는 TXT 파일 업로드<br><span style="font-size:10px;">또는 클릭하여 선택</span></p>
+          <input type="file" id="rt-file-input" accept=".pdf,.txt" style="display:none;">
+        </div>
+        <div id="rt-file-name" style="display:none;font-size:11px;color:var(--color-navy);background:#eff6ff;padding:6px 10px;border-radius:4px;margin-bottom:14px;word-break:break-all;"></div>
+        <!-- 또는 직접 입력 -->
+        <label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px;">또는 프로젝트 설명 직접 입력</label>
+        <textarea id="rt-project-text" rows="4" placeholder="프로젝트 개요, 공종, 규모 등을 자유롭게 입력..." style="width:100%;padding:8px 10px;border:1px solid var(--color-border-mid);border-radius:4px;font-size:11px;resize:vertical;font-family:inherit;"></textarea>
+        <!-- 참여 전문가 드롭다운 -->
+        <div style="margin-top:14px;position:relative;" id="rt-agent-dropdown-wrapper">
+          <label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px;">참여 전문가 선택</label>
+          <div id="rt-agent-dropdown-btn" style="width:100%;padding:9px 12px;border:1px solid var(--color-border-mid);border-radius:6px;font-size:11px;color:var(--color-text-primary);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:border-color 0.2s;">
+            <span id="rt-agent-summary">4명 선택됨</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div id="rt-agent-dropdown-list" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid var(--color-border-mid);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:100;max-height:320px;overflow-y:auto;padding:6px 0;">
+            <!-- 그룹: 핵심 참여자 -->
+            <div style="padding:4px 12px;font-size:9px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.08em;">핵심 참여자</div>
+            <label class="rt-agent-option" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:11px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+              <input type="checkbox" value="leader" data-agent="leader" checked disabled style="accent-color:#1e40af;"> <span style="font-size:13px;">🎩</span> <span style="flex:1;color:var(--color-navy);font-weight:600;">VE Leader</span><span style="font-size:9px;color:var(--color-text-muted);">필수</span>
+            </label>
+            <label class="rt-agent-option" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:11px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+              <input type="checkbox" value="idea" data-agent="idea" checked class="rt-agent-cb" style="accent-color:#d97706;"> <span style="font-size:13px;">💡</span> <span style="flex:1;">Idea Developer</span><span style="font-size:9px;color:#d97706;">아이디어 도출</span>
+            </label>
+            <label class="rt-agent-option" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:11px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+              <input type="checkbox" value="fast" data-agent="fast" checked class="rt-agent-cb" style="accent-color:#dc2626;"> <span style="font-size:13px;">📊</span> <span style="flex:1;">FAST Diagram 전문가</span><span style="font-size:9px;color:#dc2626;">기능 분석</span>
+            </label>
+            <label class="rt-agent-option" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:11px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+              <input type="checkbox" value="data" data-agent="data" checked class="rt-agent-cb" style="accent-color:#6366f1;"> <span style="font-size:13px;">📈</span> <span style="flex:1;">Data Analyst</span><span style="font-size:9px;color:#6366f1;">데이터 분석</span>
+            </label>
+            <!-- 구분선 -->
+            <div style="height:1px;background:var(--color-border);margin:6px 12px;"></div>
+            <!-- 그룹: 도메인 전문가 -->
+            <div style="padding:4px 12px;font-size:9px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.08em;">도메인 전문가</div>
+            <label class="rt-agent-option" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:11px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+              <input type="checkbox" value="건축" data-agent="architect" checked class="rt-agent-cb" style="accent-color:#b45309;"> <span style="font-size:13px;">🏗</span> <span style="flex:1;">건축 전문가</span><span style="font-size:9px;color:#b45309;">건축 도메인</span>
+            </label>
+            <label class="rt-agent-option" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:11px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+              <input type="checkbox" value="토목" data-agent="civil" class="rt-agent-cb" style="accent-color:#065f46;"> <span style="font-size:13px;">🛤</span> <span style="flex:1;">토목 전문가</span><span style="font-size:9px;color:#065f46;">토목 도메인</span>
+            </label>
+            <label class="rt-agent-option" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:11px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+              <input type="checkbox" value="전기" data-agent="electronic" checked class="rt-agent-cb" style="accent-color:#7c3aed;"> <span style="font-size:13px;">⚡</span> <span style="flex:1;">전기 전문가</span><span style="font-size:9px;color:#7c3aed;">전기 도메인</span>
+            </label>
+            <label class="rt-agent-option" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:11px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+              <input type="checkbox" value="기계설비" data-agent="mechanic" class="rt-agent-cb" style="accent-color:#0369a1;"> <span style="font-size:13px;">⚙</span> <span style="flex:1;">기계설비 전문가</span><span style="font-size:9px;color:#0369a1;">기계설비 도메인</span>
+            </label>
+            <label class="rt-agent-option" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:11px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+              <input type="checkbox" value="배관" data-agent="plumbing" class="rt-agent-cb" style="accent-color:#0e7490;"> <span style="font-size:13px;">🚰</span> <span style="flex:1;">배관 전문가</span><span style="font-size:9px;color:#0e7490;">배관 도메인</span>
+            </label>
+            <label class="rt-agent-option" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:11px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+              <input type="checkbox" value="조경" data-agent="landscape" class="rt-agent-cb" style="accent-color:#15803d;"> <span style="font-size:13px;">🌿</span> <span style="flex:1;">조경 전문가</span><span style="font-size:9px;color:#15803d;">조경 도메인</span>
+            </label>
+          </div>
+          <!-- 숨겨진 기존 호환용 컨테이너 -->
+          <div id="rt-disciplines" style="display:none;"></div>
+        </div>
+        <button id="rt-start-btn" style="width:100%;margin-top:14px;padding:12px;background:var(--color-navy);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;">
+          🎙 VE 회의 시작
+        </button>
+        <!-- 참여 Agent 목록 -->
+        <div id="rt-agent-list" style="margin-top:16px;">
+          <div style="font-size:10px;font-weight:600;color:var(--color-text-muted);margin-bottom:8px;">참여 에이전트</div>
+          <div id="rt-agents-display" style="display:flex;flex-direction:column;gap:4px;"></div>
+        </div>
+      </div>
+      <!-- 우측: 토론 채팅방 -->
+      <div style="display:flex;flex-direction:column;height:100%;background:#fff;">
+        <!-- 채팅 헤더 -->
+        <div style="padding:12px 20px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:16px;">🎙</span>
+            <span style="font-size:13px;font-weight:700;color:var(--color-navy);" id="rt-room-title">VE 라운드테이블</span>
+            <span style="font-size:10px;color:var(--color-text-muted);background:var(--bg-secondary);padding:2px 8px;border-radius:10px;" id="rt-status-badge">대기 중</span>
+          </div>
+          <span style="font-size:10px;color:var(--color-text-muted);" id="rt-elapsed"></span>
+        </div>
+        <!-- 채팅 메시지 영역 -->
+        <div id="rt-chat-area" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;">
+          <div style="text-align:center;padding:60px 20px;color:var(--color-text-muted);">
+            <div style="font-size:32px;margin-bottom:8px;">🎙</div>
+            <p style="font-size:13px;font-weight:600;margin-bottom:4px;">VE 라운드테이블</p>
+            <p style="font-size:11px;line-height:1.6;">프로젝트 파일(PDF/TXT)을 업로드하거나 설명을 입력한 후<br>"VE 회의 시작"을 누르면 AI 전문가들이 토론을 시작합니다.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE 8: VE 보고서 생성 ── -->
+  <div class="page" id="page-report">
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:0;height:calc(100vh - 100px);">
+      <!-- 좌측: 세션 선택 -->
+      <div style="background:#f8fafc;border-right:1px solid var(--color-border);padding:20px;overflow-y:auto;">
+        <h3 style="font-size:14px;font-weight:700;color:var(--color-navy);margin-bottom:16px;">VE Report Generator</h3>
+        <p style="font-size:11px;color:var(--color-text-muted);line-height:1.6;margin-bottom:16px;">라운드테이블 회의 결과를 VE 워크숍 보고서로 자동 생성합니다.</p>
+        <!-- 세션 목록 -->
+        <div style="margin-bottom:16px;">
+          <label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px;">회의 세션 선택</label>
+          <select id="rpt-session-select" style="width:100%;padding:9px 12px;border:1px solid var(--color-border-mid);border-radius:6px;font-size:11px;background:#fff;">
+            <option value="">-- 세션을 선택하세요 --</option>
+          </select>
+        </div>
+        <div id="rpt-session-info" style="display:none;font-size:11px;color:var(--color-text-secondary);background:#fff;border:1px solid var(--color-border);border-radius:6px;padding:12px;margin-bottom:16px;line-height:1.7;"></div>
+        <button id="rpt-generate-btn" style="width:100%;padding:12px;background:var(--color-navy);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;margin-bottom:10px;" disabled>
+          📄 보고서 생성
+        </button>
+        <button id="rpt-print-btn" style="width:100%;padding:10px;background:#fff;color:var(--color-navy);border:1px solid var(--color-border-mid);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;display:none;">
+          🖨 PDF 내보내기 (인쇄)
+        </button>
+      </div>
+      <!-- 우측: 보고서 미리보기 -->
+      <div style="overflow-y:auto;background:#e2e8f0;padding:24px;">
+        <div id="rpt-preview" style="max-width:800px;margin:0 auto;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.08);border-radius:4px;min-height:600px;">
+          <div style="text-align:center;padding:80px 40px;color:var(--color-text-muted);">
+            <div style="font-size:48px;margin-bottom:16px;">📄</div>
+            <p style="font-size:14px;font-weight:600;margin-bottom:8px;">VE 보고서 미리보기</p>
+            <p style="font-size:12px;line-height:1.6;">좌측에서 회의 세션을 선택하고 "보고서 생성"을<br>클릭하면 여기에 보고서가 표시됩니다.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE 9: LCC 비교 분석 ── -->
+  <div class="page" id="page-lcc">
+    <div style="display:grid;grid-template-columns:320px 1fr;gap:0;height:calc(100vh - 100px);">
+      <!-- 좌측: 입력 패널 -->
+      <div style="background:#f8fafc;border-right:1px solid var(--color-border);padding:20px;overflow-y:auto;">
+        <h3 style="font-size:14px;font-weight:700;color:var(--color-navy);margin-bottom:4px;">LCC 비교 분석</h3>
+        <p style="font-size:10px;color:var(--color-text-muted);line-height:1.5;margin-bottom:16px;">Life Cycle Cost — 원안 vs 대안의 생애주기비용을 비교 분석합니다.</p>
+        <!-- 분석 조건 -->
+        <div style="margin-bottom:14px;">
+          <label class="lcc-label">분석 기간 (년)</label>
+          <input type="number" id="lcc-period" value="30" min="10" max="60" class="lcc-input">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label class="lcc-label">할인율 (%)</label>
+          <input type="number" id="lcc-rate" value="4.5" min="0" max="15" step="0.1" class="lcc-input">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label class="lcc-label">대안명</label>
+          <input type="text" id="lcc-alt-name" value="VE 대안" class="lcc-input" placeholder="대안명">
+        </div>
+        <!-- 비용 입력 테이블 -->
+        <div style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--color-text-secondary);">비용 입력 (백만원)</div>
+        <table style="width:100%;font-size:10px;border-collapse:collapse;margin-bottom:14px;">
+          <thead>
+            <tr style="background:#e2e8f0;">
+              <th style="padding:6px 4px;text-align:left;font-weight:600;color:var(--color-navy);">항목</th>
+              <th style="padding:6px 4px;text-align:right;font-weight:600;color:#475569;">원안</th>
+              <th style="padding:6px 4px;text-align:right;font-weight:600;color:#3B82F6;">대안</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:4px;">초기 건설비</td>
+              <td style="padding:4px;"><input type="number" id="lcc-orig-init" value="5000" class="lcc-cell"></td>
+              <td style="padding:4px;"><input type="number" id="lcc-alt-init" value="4200" class="lcc-cell" style="border-color:#3B82F6;"></td>
+            </tr>
+            <tr>
+              <td style="padding:4px;">설계비</td>
+              <td style="padding:4px;"><input type="number" id="lcc-orig-design" value="300" class="lcc-cell"></td>
+              <td style="padding:4px;"><input type="number" id="lcc-alt-design" value="300" class="lcc-cell" style="border-color:#3B82F6;"></td>
+            </tr>
+            <tr>
+              <td style="padding:4px;">연간 유지관리비</td>
+              <td style="padding:4px;"><input type="number" id="lcc-orig-maint" value="120" class="lcc-cell"></td>
+              <td style="padding:4px;"><input type="number" id="lcc-alt-maint" value="85" class="lcc-cell" style="border-color:#3B82F6;"></td>
+            </tr>
+            <tr>
+              <td style="padding:4px;">연간 에너지비</td>
+              <td style="padding:4px;"><input type="number" id="lcc-orig-energy" value="80" class="lcc-cell"></td>
+              <td style="padding:4px;"><input type="number" id="lcc-alt-energy" value="55" class="lcc-cell" style="border-color:#3B82F6;"></td>
+            </tr>
+            <tr>
+              <td style="padding:4px;">교체비 (주기마다)</td>
+              <td style="padding:4px;"><input type="number" id="lcc-orig-replace" value="400" class="lcc-cell"></td>
+              <td style="padding:4px;"><input type="number" id="lcc-alt-replace" value="250" class="lcc-cell" style="border-color:#3B82F6;"></td>
+            </tr>
+            <tr>
+              <td style="padding:4px;">교체 주기 (년)</td>
+              <td style="padding:4px;"><input type="number" id="lcc-orig-repcycle" value="15" class="lcc-cell"></td>
+              <td style="padding:4px;"><input type="number" id="lcc-alt-repcycle" value="20" class="lcc-cell" style="border-color:#3B82F6;"></td>
+            </tr>
+            <tr>
+              <td style="padding:4px;">철거비 (말기)</td>
+              <td style="padding:4px;"><input type="number" id="lcc-orig-demo" value="200" class="lcc-cell"></td>
+              <td style="padding:4px;"><input type="number" id="lcc-alt-demo" value="180" class="lcc-cell" style="border-color:#3B82F6;"></td>
+            </tr>
+          </tbody>
+        </table>
+        <button id="lcc-calc-btn" style="width:100%;padding:12px;background:var(--color-navy);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;">
+          📊 LCC 비교 분석 실행
+        </button>
+      </div>
+      <!-- 우측: 결과 -->
+      <div style="overflow-y:auto;padding:24px;">
+        <div id="lcc-results" style="display:none;">
+          <!-- KPI -->
+          <div id="lcc-kpi-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;"></div>
+          <!-- 차트 -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+            <div class="chart-card"><h3>LCC 총액 비교</h3><canvas id="lcc-chart-total"></canvas></div>
+            <div class="chart-card"><h3>항목별 비용 구성</h3><canvas id="lcc-chart-breakdown"></canvas></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+            <div class="chart-card"><h3>누적 비용 추이 (NPV)</h3><canvas id="lcc-chart-cumulative"></canvas></div>
+            <div class="chart-card"><h3>연도별 비용 흐름</h3><canvas id="lcc-chart-annual"></canvas></div>
+          </div>
+          <!-- 상세 테이블 -->
+          <div style="background:#fff;border:1px solid var(--color-border);border-radius:4px;overflow:auto;">
+            <table class="data-table" id="lcc-detail-table" style="font-size:11px;">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- 초기 안내 -->
+        <div id="lcc-placeholder" style="text-align:center;padding:80px 40px;color:var(--color-text-muted);">
+          <div style="font-size:48px;margin-bottom:16px;">📊</div>
+          <p style="font-size:14px;font-weight:600;margin-bottom:8px;">LCC 비교 분석</p>
+          <p style="font-size:12px;line-height:1.6;">좌측에서 원안/대안 비용을 입력하고<br>"분석 실행"을 클릭하면 결과가 표시됩니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE 10: FAST Diagram ── -->
+  <div class="page" id="page-fast">
+    <div style="display:grid;grid-template-columns:320px 1fr;gap:0;height:calc(100vh - 100px);">
+      <!-- 좌측: 입력 -->
+      <div style="background:#f8fafc;border-right:1px solid var(--color-border);padding:20px;overflow-y:auto;">
+        <h3 style="font-size:14px;font-weight:700;color:var(--color-navy);margin-bottom:4px;">FAST Diagram</h3>
+        <p style="font-size:10px;color:var(--color-text-muted);line-height:1.5;margin-bottom:16px;">Function Analysis System Technique — AI 기반 기능 분해 다이어그램을 자동 생성합니다.</p>
+        <div style="margin-bottom:14px;">
+          <label class="lcc-label">프로젝트 / 시설명</label>
+          <input type="text" id="fast-project" value="소방 교육 훈련 시설" class="lcc-input" placeholder="예: 공동주택 전기설비">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label class="lcc-label">상위 기능 (선택)</label>
+          <input type="text" id="fast-higher" value="국민 안전 보호" class="lcc-input" placeholder="예: 거주자 쾌적한 생활 제공">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label class="lcc-label">프로젝트 설명 (선택)</label>
+          <textarea id="fast-desc" rows="3" class="lcc-input" style="resize:vertical;font-family:inherit;" placeholder="프로젝트의 주요 기능, 공종, 규모 등을 입력하면 더 정확한 FAST를 생성합니다."></textarea>
+        </div>
+        <button id="fast-gen-btn" style="width:100%;padding:12px;background:var(--color-navy);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;margin-bottom:12px;">
+          🧠 AI FAST Diagram 생성
+        </button>
+        <!-- 수동 편집 -->
+        <div style="margin-top:8px;">
+          <label class="lcc-label">Mermaid 코드 직접 편집</label>
+          <textarea id="fast-code" rows="12" style="width:100%;padding:8px 10px;border:1px solid var(--color-border-mid);border-radius:4px;font-size:10px;font-family:'Courier New',monospace;resize:vertical;line-height:1.5;" placeholder="AI가 생성한 Mermaid 코드가 여기에 표시됩니다."></textarea>
+          <button id="fast-render-btn" style="width:100%;margin-top:6px;padding:8px;background:#fff;color:var(--color-navy);border:1px solid var(--color-border-mid);border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">
+            🔄 다이어그램 다시 렌더링
+          </button>
+        </div>
+      </div>
+      <!-- 우측: 다이어그램 -->
+      <div style="overflow:auto;padding:24px;background:#fff;display:flex;align-items:flex-start;justify-content:center;">
+        <div id="fast-diagram-area" style="width:100%;min-height:500px;">
+          <div style="text-align:center;padding:80px 40px;color:var(--color-text-muted);">
+            <div style="font-size:48px;margin-bottom:16px;">🧠</div>
+            <p style="font-size:14px;font-weight:600;margin-bottom:8px;">FAST Diagram</p>
+            <p style="font-size:12px;line-height:1.6;">프로젝트명을 입력하고 "AI FAST Diagram 생성"을<br>클릭하면 기능 분해 다이어그램이 생성됩니다.</p>
+            <div style="margin-top:20px;font-size:10px;color:#94a3b8;line-height:1.8;">
+              <strong>HOW? ←</strong> (How to achieve?) &nbsp;&nbsp; <strong>→ WHY?</strong> (Why this function?)<br>
+              좌측으로 갈수록 구체적 수단, 우측으로 갈수록 상위 목적
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE 11: 프로젝트 비교 ── -->
+  <div class="page" id="page-compare">
+    <div style="padding:0;">
+      <!-- 필터 바 -->
+      <div style="background:#f0f4f8;padding:12px 20px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:11px;font-weight:700;color:var(--color-navy);">필터</span>
+        <select id="cmp-filter-how1" class="cmp-select" style="min-width:140px;">
+          <option value="">전체 공사</option>
+        </select>
+        <select id="cmp-filter-field" class="cmp-select" style="min-width:140px;">
+          <option value="">전체 유형</option>
+        </select>
+        <span style="font-size:10px;color:var(--color-text-muted);margin-left:4px;" id="cmp-filter-count"></span>
+      </div>
+      <!-- 선택 바 -->
+      <div style="background:#f8fafc;padding:12px 20px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:12px;font-weight:700;color:var(--color-navy);">프로젝트 비교</span>
+        <select id="cmp-proj-1" class="cmp-select"><option value="">프로젝트 A</option></select>
+        <span style="font-size:11px;color:var(--color-text-muted);font-weight:600;">vs</span>
+        <select id="cmp-proj-2" class="cmp-select"><option value="">프로젝트 B</option></select>
+        <span style="font-size:11px;color:var(--color-text-muted);font-weight:600;">vs</span>
+        <select id="cmp-proj-3" class="cmp-select"><option value="">프로젝트 C (선택)</option></select>
+        <button id="cmp-run-btn" style="padding:8px 20px;background:var(--color-navy);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;margin-left:auto;">🔍 비교 분석</button>
+      </div>
+      <!-- 결과 -->
+      <div style="padding:20px;overflow-y:auto;height:calc(100vh - 160px);">
+        <div id="cmp-results" style="display:none;">
+          <div id="cmp-kpi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px;"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+            <div class="chart-card"><h3>대안 수 비교</h3><canvas id="cmp-chart-count"></canvas></div>
+            <div class="chart-card"><h3>평균 절감율 비교</h3><canvas id="cmp-chart-savings"></canvas></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+            <div class="chart-card"><h3>공종별 대안 분포</h3><canvas id="cmp-chart-how1"></canvas></div>
+            <div class="chart-card"><h3>가치 유형 비교</h3><canvas id="cmp-chart-vtype"></canvas></div>
+          </div>
+          <div style="background:#fff;border:1px solid var(--color-border);border-radius:4px;overflow:auto;">
+            <table class="data-table" id="cmp-detail-table" style="font-size:11px;"><thead></thead><tbody></tbody></table>
+          </div>
+        </div>
+        <div id="cmp-placeholder" style="text-align:center;padding:80px 40px;color:var(--color-text-muted);">
+          <div style="font-size:48px;margin-bottom:16px;">🔍</div>
+          <p style="font-size:14px;font-weight:600;margin-bottom:8px;">프로젝트 비교 분석</p>
+          <p style="font-size:12px;line-height:1.6;">2~3개 프로젝트를 선택하고 "비교 분석"을<br>클릭하면 결과가 표시됩니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE 12: 아이디어 평가 매트릭스 ── -->
+  <div class="page" id="page-eval">
+    <div style="padding:0;">
+      <!-- 상단 툴바 -->
+      <div style="background:#f8fafc;padding:14px 20px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:12px;font-weight:700;color:var(--color-navy);">VE 아이디어 평가 매트릭스</span>
+        <button id="eval-add-idea" style="padding:6px 14px;background:#fff;color:var(--color-navy);border:1px solid var(--color-border-mid);border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">+ 아이디어 추가</button>
+        <button id="eval-add-criteria" style="padding:6px 14px;background:#fff;color:var(--color-accent);border:1px solid var(--color-border-mid);border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">+ 평가기준 추가</button>
+        <button id="eval-calc" style="padding:6px 14px;background:var(--color-navy);color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;margin-left:auto;">📊 종합 평가 실행</button>
+      </div>
+      <!-- 평가 영역 -->
+      <div style="padding:20px;overflow:auto;height:calc(100vh - 160px);">
+        <div id="eval-matrix" style="overflow-x:auto;margin-bottom:20px;"></div>
+        <div id="eval-result" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+            <div class="chart-card"><h3>종합 점수 순위</h3><canvas id="eval-chart-rank"></canvas></div>
+            <div class="chart-card"><h3>항목별 점수 분포</h3><canvas id="eval-chart-radar"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE 13: VE E-book ── -->
+  <div class="page" id="page-ebook">
+    <iframe src="https://www.ninetynine99.co.kr/pocket-ebook/ve_pocketbook_final_15.html"
+      style="width:100%;height:calc(100vh - 60px);border:none;"
+      allowfullscreen></iframe>
+  </div>
+
 </main>
 
 <!-- ══ MODAL ══ -->
@@ -234,5 +647,12 @@
 </div>
 
 <script src="/static/js/dashboard.js"></script>
+<script src="/static/js/ve-agent.js"></script>
+<script src="/static/js/ve-report.js"></script>
+<script src="/static/js/lcc-analysis.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="/static/js/fast-diagram.js"></script>
+<script src="/static/js/project-compare.js?v=4"></script>
+<script src="/static/js/idea-eval.js"></script>
 </body>
 </html>

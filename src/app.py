@@ -223,6 +223,8 @@ def api_alternatives():
     q = """
         SELECT a.alt_number, a.proposal_title, a.location, a.how2_code, a.how2_name,
                a.space, a.value_type_corrected as value_type,
+               COALESCE(a.field_category, '') as field_category,
+               COALESCE(a.project_name, '') as project_name,
                v.performance_change_rate, v.cost_change_rate, v.value_change_rate,
                (c.original_cost - c.alternative_cost) as savings_calc, c.savings_rate
         FROM alternatives a
@@ -258,6 +260,8 @@ def api_alternatives():
         "how2_name": r["how2_name"] or "",
         "space": r["space"] or "",
         "value_type": r["value_type"] or "",
+        "field": r["field_category"] or "",
+        "pname": r["project_name"] or "",
         "perf_change": round(r["performance_change_rate"] or 0, 2),
         "cost_change": round(r["cost_change_rate"] or 0, 2),
         "value_change": round(r["value_change_rate"] or 0, 2),
@@ -389,6 +393,145 @@ def api_kg_query():
     # GraphML에서 읽으면 속성이 문자열 — node_type 등 복원
     result = query_kg_hop(G, query_text)
     return jsonify(result)
+
+
+@app.route("/api/search")
+def api_semantic_search():
+    """시맨틱 검색 API — Embedding 기반 의미 검색."""
+    query_text = request.args.get("q", "").strip()
+    if not query_text:
+        return jsonify({"error": "Query required"}), 400
+
+    top_k = request.args.get("top_k", 10, type=int)
+
+    try:
+        from src.semantic_search import semantic_search
+        results = semantic_search(query_text, top_k=top_k)
+        return jsonify({
+            "query": query_text,
+            "count": len(results),
+            "alternatives": results,
+        })
+    except FileNotFoundError:
+        return jsonify({"error": "임베딩 인덱스가 아직 생성되지 않았습니다."}), 503
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@app.route("/api/ai/search")
+def api_hybrid_search():
+    """하이브리드 RAG 검색 API — Embedding + KG + Gemini."""
+    query_text = request.args.get("q", "").strip()
+    if not query_text:
+        return jsonify({"error": "Query required"}), 400
+
+    top_k = request.args.get("top_k", 10, type=int)
+    use_gemini = request.args.get("gemini", "false").lower() == "true"
+
+    try:
+        from src.semantic_search import hybrid_search
+        result = hybrid_search(query_text, top_k=top_k, use_gemini=use_gemini)
+        return jsonify(result)
+    except FileNotFoundError:
+        return jsonify({"error": "임베딩 인덱스가 아직 생성되지 않았습니다."}), 503
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@app.route("/api/alternatives/<int:alt_num>/similar")
+def api_similar_alternatives(alt_num):
+    """유사 대안 검색 API — 특정 대안과 가장 유사한 대안들."""
+    top_k = request.args.get("top_k", 5, type=int)
+
+    try:
+        from src.semantic_search import find_similar_alternatives
+        results = find_similar_alternatives(alt_num, top_k=top_k)
+        return jsonify({
+            "base_alt_number": alt_num,
+            "count": len(results),
+            "similar": results,
+        })
+    except FileNotFoundError:
+        return jsonify({"error": "임베딩 인덱스가 아직 생성되지 않았습니다."}), 503
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@app.route("/api/classify", methods=["POST"])
+def api_classify():
+    """자동 분류 API — 텍스트에서 HOW2 대공종 + ValueType 예측."""
+    data = request.get_json()
+    text = (data or {}).get("text", "").strip()
+    if not text:
+        return jsonify({"error": "text required"}), 400
+
+    try:
+        from src.ml_classifier import classify_alternative
+        result = classify_alternative(text)
+        return jsonify(result)
+    except FileNotFoundError:
+        return jsonify({"error": "분류기가 아직 학습되지 않았습니다."}), 503
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@app.route("/api/clusters")
+def api_clusters():
+    """클러스터 목록 API — 전체 클러스터 요약 정보."""
+    try:
+        cluster_path = BASE_DIR / "data" / "ml_models" / "cluster_result.json"
+        if not cluster_path.exists():
+            return jsonify({"error": "클러스터링 결과가 없습니다."}), 503
+
+        with open(cluster_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # 멤버 목록은 제외하고 요약만 반환
+        summary = {
+            "n_clusters": data["n_clusters"],
+            "silhouette_score": data["silhouette_score"],
+            "total_alternatives": data["total_alternatives"],
+            "clusters": [{
+                "cluster_id": c["cluster_id"],
+                "label": c["label"],
+                "size": c["size"],
+                "representative": c["representative"],
+                "how2_distribution": c["how2_distribution"],
+                "vtype_distribution": c["vtype_distribution"],
+                "avg_savings_rate": c["avg_savings_rate"],
+                "avg_value_change": c["avg_value_change"],
+                "avg_perf_change": c["avg_perf_change"],
+                "avg_cost_change": c["avg_cost_change"],
+            } for c in data["clusters"]],
+        }
+        return jsonify(summary)
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@app.route("/api/clusters/<int:cluster_id>")
+def api_cluster_detail(cluster_id):
+    """클러스터 상세 API — 특정 클러스터의 멤버 목록 포함."""
+    try:
+        cluster_path = BASE_DIR / "data" / "ml_models" / "cluster_result.json"
+        if not cluster_path.exists():
+            return jsonify({"error": "클러스터링 결과가 없습니다."}), 503
+
+        with open(cluster_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        cluster = next((c for c in data["clusters"] if c["cluster_id"] == cluster_id), None)
+        if not cluster:
+            return jsonify({"error": "Cluster not found"}), 404
+        return jsonify(cluster)
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
 
 @app.route("/api/images/<path:filename>")
@@ -557,9 +700,363 @@ def performance_page():
     return render_template("index.html")
 
 
+# ═══════════════════════════════════════════════════════════
+#  Task 37: VE Multi-Agent API
+# ═══════════════════════════════════════════════════════════
+
+# VE Leader 인스턴스 (애플리케이션 수명 동안 유지)
+_ve_leader = None
+
+def _get_ve_leader():
+    global _ve_leader
+    if _ve_leader is None:
+        from src.agents.ve_leader import VELeader
+        _ve_leader = VELeader()
+    return _ve_leader
+
+
+@app.route("/api/ve/session", methods=["POST"])
+def ve_create_session():
+    """새 VE 세션 생성 및 분석 실행."""
+    import threading
+    from src.agents.schemas import ProjectBrief, DesignAnalysis, DesignElement, CostBreakdown, CostItem
+    from dataclasses import asdict
+
+    data = request.get_json(silent=True) or {}
+    brief_data = data.get("project_brief", data)
+
+    brief = ProjectBrief(
+        project_name=brief_data.get("project_name", "미지정 프로젝트"),
+        project_type=brief_data.get("project_type", ""),
+        total_area=float(brief_data.get("total_area", 0)),
+        total_cost=float(brief_data.get("total_cost", 0)),
+        ve_target_rate=float(brief_data.get("ve_target_rate", 5.0)),
+        focus_disciplines=brief_data.get("focus_disciplines", []),
+        constraints=brief_data.get("constraints", []),
+        description=brief_data.get("description", ""),
+    )
+
+    errors = brief.validate()
+    if errors:
+        return jsonify({"error": errors}), 400
+
+    # 도면/내역 AI 데이터 (선택)
+    design = None
+    if "design_analysis" in data and data["design_analysis"]:
+        d = data["design_analysis"]
+        design = DesignAnalysis(
+            elements=[DesignElement(**e) for e in d.get("elements", [])]
+        )
+
+    cost = None
+    if "cost_breakdown" in data and data["cost_breakdown"]:
+        c = data["cost_breakdown"]
+        cost = CostBreakdown(
+            items=[CostItem(**i) for i in c.get("items", [])]
+        )
+
+    leader = _get_ve_leader()
+
+    # 동기 실행 (50초 이내 완료)
+    try:
+        session = leader.run_session(brief, design, cost)
+        return jsonify({
+            "session_id": session.session_id,
+            "status": session.status,
+            "progress": session.progress,
+            "ideas_count": len(session.ideas),
+            "reviews_count": len(session.domain_reviews),
+            "report_length": len(session.report_markdown),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/ve/session/<session_id>/status")
+def ve_session_status(session_id):
+    """VE 세션 진행 상태 조회."""
+    leader = _get_ve_leader()
+    session = leader.sessions.get(session_id)
+    if not session:
+        return jsonify({"error": "세션을 찾을 수 없습니다."}), 404
+    return jsonify({
+        "session_id": session.session_id,
+        "status": session.status,
+        "current_step": session.current_step,
+        "total_steps": session.total_steps,
+        "progress": session.progress,
+    })
+
+
+@app.route("/api/ve/session/<session_id>/result")
+def ve_session_result(session_id):
+    """VE 세션 최종 결과 조회."""
+    from dataclasses import asdict
+    leader = _get_ve_leader()
+    session = leader.sessions.get(session_id)
+    if not session:
+        return jsonify({"error": "세션을 찾을 수 없습니다."}), 404
+
+    return jsonify({
+        "session_id": session.session_id,
+        "status": session.status,
+        "project": {
+            "name": session.project_brief.project_name,
+            "type": session.project_brief.project_type,
+            "area": session.project_brief.total_area,
+            "cost": session.project_brief.total_cost,
+        },
+        "targets": [asdict(t) for t in session.targets],
+        "ideas": [asdict(i) for i in session.ideas],
+        "domain_reviews": [asdict(r) for r in session.domain_reviews],
+        "report_markdown": session.report_markdown,
+        "step_results": {
+            str(k): v.to_dict() for k, v in session.step_results.items()
+        },
+    })
+
+
+@app.route("/api/ve/session/<session_id>/feedback", methods=["POST"])
+def ve_session_feedback(session_id):
+    """사용자 피드백 저장."""
+    leader = _get_ve_leader()
+    session = leader.sessions.get(session_id)
+    if not session:
+        return jsonify({"error": "세션을 찾을 수 없습니다."}), 404
+
+    feedback = request.get_json(silent=True) or {}
+    # 향후 피드백 저장 로직 구현 예정
+    return jsonify({"status": "feedback_received", "session_id": session_id})
+
+
+@app.route("/api/ve/sessions")
+def ve_list_sessions():
+    """모든 VE 세션 목록 조회."""
+    leader = _get_ve_leader()
+    sessions = []
+    for sid, s in leader.sessions.items():
+        sessions.append({
+            "session_id": sid,
+            "project_name": s.project_brief.project_name,
+            "status": s.status,
+            "ideas_count": len(s.ideas),
+            "created_at": s.created_at,
+        })
+    return jsonify({"sessions": sessions})
+
+
+# ═══════════════════════════════════════════════════════════
+#  VE Roundtable API (Async v2 — 비동기 처리)
+# ═══════════════════════════════════════════════════════════
+
+_roundtable_sessions = {}
+
+
+@app.route("/api/ve/roundtable", methods=["POST"])
+def ve_roundtable():
+    """VE 라운드테이블 토론 세션 생성 (비동기).
+
+    세션 ID를 즉시 반환하고, 백그라운드에서 Agent 토론을 실행합니다.
+    프론트엔드는 GET /api/ve/roundtable/<id>/messages?since=<index> 로
+    새 메시지를 폴링하여 실시간으로 수신합니다.
+    """
+    from src.agents.roundtable import start_roundtable_async
+
+    project_text = ""
+    project_name = ""
+    disciplines = []
+
+    # 파일 업로드 처리
+    if "file" in request.files:
+        f = request.files["file"]
+        fname = f.filename.lower()
+        if fname.endswith(".txt"):
+            project_text = f.read().decode("utf-8", errors="ignore")
+        elif fname.endswith(".pdf"):
+            try:
+                import fitz
+                pdf_bytes = f.read()
+                doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                pages = []
+                for page in doc:
+                    pages.append(page.get_text())
+                    if len(pages) >= 10:
+                        break
+                project_text = "\n".join(pages)
+            except Exception as e:
+                project_text = f"(PDF 파싱 실패: {e})"
+        project_name = request.form.get("project_name", f.filename)
+        disc_raw = request.form.get("disciplines", "건축,전기")
+        disciplines = [d.strip() for d in disc_raw.split(",") if d.strip()]
+    else:
+        data = request.get_json(silent=True) or {}
+        project_text = data.get("project_text", "")
+        project_name = data.get("project_name", "VE 프로젝트")
+        disciplines = data.get("disciplines", ["건축", "전기"])
+
+    if not project_text:
+        return jsonify({"error": "프로젝트 정보가 없습니다. 파일을 업로드하거나 텍스트를 입력하세요."}), 400
+
+    try:
+        # 비동기 시작 — 세션 즉시 반환
+        session = start_roundtable_async(project_text, project_name, disciplines)
+        _roundtable_sessions[session.session_id] = session
+        return jsonify({
+            "session_id": session.session_id,
+            "status": session.status,
+            "message_count": 0,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/ve/roundtable/<session_id>/messages")
+def ve_roundtable_messages(session_id):
+    """라운드테이블 메시지 폴링 조회.
+
+    Query params:
+        since (int): 이 인덱스 이후의 새 메시지만 반환 (0-indexed).
+                     최초 요청 시 since=0, 이후 반환된 total_count를 전달.
+    """
+    session = _roundtable_sessions.get(session_id)
+    if not session:
+        return jsonify({"error": "세션 없음"}), 404
+
+    since = request.args.get("since", 0, type=int)
+
+    with session._lock:
+        all_messages = list(session.messages)
+
+    new_messages = all_messages[since:]
+
+    return jsonify({
+        "session_id": session_id,
+        "status": session.status,
+        "error": session.error,
+        "total_count": len(all_messages),
+        "new_messages": [m.to_dict() for m in new_messages],
+    })
+
+
+@app.route("/api/ve/roundtable/sessions")
+def ve_roundtable_sessions():
+    """완료된 라운드테이블 세션 목록 조회 (보고서 페이지용)."""
+    sessions = []
+    for sid, s in _roundtable_sessions.items():
+        with s._lock:
+            msg_count = len(s.messages)
+        sessions.append({
+            "session_id": sid,
+            "project_name": s.project_name,
+            "status": s.status,
+            "message_count": msg_count,
+            "created_at": s.created_at,
+        })
+    sessions.sort(key=lambda x: -x["created_at"])
+    return jsonify({"sessions": sessions})
+
+
+@app.route("/api/ve/fast-diagram", methods=["POST"])
+def ve_fast_diagram():
+    """AI 기반 FAST Diagram Mermaid 코드 생성."""
+    data = request.get_json(force=True)
+    project = data.get("project", "건축 시설")
+    higher = data.get("higher_function", "")
+    desc = data.get("description", "")
+
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        return jsonify({"error": "GEMINI_API_KEY not set"}), 500
+
+    prompt = f"""당신은 VE(Value Engineering) FAST Diagram 전문가(Charles Bytheway 방법론)입니다.
+아래 프로젝트에 대한 표준 FAST Diagram을 Mermaid flowchart LR 코드로 작성하세요.
+
+[프로젝트]: {project}
+{f'[상위 기능]: {higher}' if higher else ''}
+{f'[상세 설명]: {desc[:500]}' if desc else ''}
+
+[표준 FAST Diagram 레이아웃 - 반드시 준수]
+
+■ 배치 방향: flowchart LR (좌→우)
+  - 좌측 시작 = Higher Order Function (WHY? 최종 상위 목적)
+  - 중앙 = Basic Function → Critical Path (SCOPE/WHAT)
+  - 우측 끝 = Lower Order Function (HOW? 구체적 수단/입력)
+  - 화살표(-->)는 좌→우: HOF --> BF --> DC1 --> DC2 --> ... --> LOF
+  - 좌→우 읽기 = "HOW?", 우→좌 읽기 = "WHY?"
+
+■ 노드 콘텐츠 형식 (매우 중요 - HTML 라벨 사용):
+  모든 노드는 제목(굵게) + 줄바꿈 + 세부설명 형태로 작성합니다.
+  형식: 노드id["<b>제목</b><br/><small>세부 설명 1줄</small>"]
+  예시: dc1["<b>빛 생성</b><br/><small>LED/할로겐 광원 사용</small>"]
+
+■ 기능 분류 (모두 포함):
+  a) HOF: 프로젝트 최종 목적 1개 (좌측 끝, 평행사변형)
+  b) BF: 핵심 존재 이유 1개 (HOF 바로 오른쪽, :::basic 스타일)
+  c) DC: Critical Path 필수 기능 4~6개 (사각 박스, 일렬 연결)
+  d) LOF: 입력/전제 조건 1~2개 (우측 끝, 평행사변형)
+  e) SF: Supporting Functions 3~4개 (둥근 박스, Critical Path 아래에서 When? 점선 연결)
+  f) Design Criteria: 상단 subgraph 3~4개
+  g) All-the-time: 상단 subgraph 3~4개
+
+■ Mermaid 코드 규칙:
+  - 첫줄: flowchart LR
+  - HOF: hof[/"<b>상위기능</b><br/><small>설명</small>"/]
+  - BF: bf["<b>기본기능</b><br/><small>설명</small>"]:::basic
+  - DC: dc1["<b>기능명</b><br/><small>설명</small>"]
+  - LOF: lof[/"<b>입력기능</b><br/><small>설명</small>"/]
+  - SF: sf1("<b>지원기능</b><br/><small>설명</small>")
+  - Design Criteria: subgraph DC["🔧 설계 기준 Design Criteria"] ... end
+  - All-the-time: subgraph AT["⏰ 항시 기능 All-the-time"] ... end
+  - Critical Path: 실선 -->
+  - When?/지원: 점선 -.->|When|
+  - classDef basic fill:#1E3A5F,stroke:#1E3A5F,color:#fff,font-weight:bold,font-size:16px
+
+[출력 형식 예시 - PC 프로젝터]
+flowchart LR
+    subgraph DC["🔧 설계 기준 Design Criteria"]
+        cr1["<b>아이디어 전달</b><br/><small>프레젠테이션 지원</small>"]
+        cr2["<b>소음 최소화</b><br/><small>팬/냉각 소음 40dB 이하</small>"]
+        cr3["<b>내구성 확보</b><br/><small>10,000시간 램프 수명</small>"]
+    end
+    subgraph AT["⏰ 항시 기능 All-the-time"]
+        at1["<b>미관 향상</b><br/><small>슬림 디자인 적용</small>"]
+        at2["<b>부상 방지</b><br/><small>과열 차단 장치</small>"]
+        at3["<b>고객 안내</b><br/><small>OSD 메뉴 제공</small>"]
+    end
+    hof[/"<b>정보 공유</b><br/><small>회의실 프레젠테이션</small>"/] --> bf["<b>이미지 투사</b><br/><small>스크린에 영상 출력</small>"]:::basic --> dc1["<b>이미지 초점</b><br/><small>렌즈 광학 조정</small>"] --> dc2["<b>빛 투과</b><br/><small>LCD/DLP 패널 통과</small>"] --> dc3["<b>빛 생성</b><br/><small>광원 램프 발광</small>"] --> dc4["<b>에너지 변환</b><br/><small>전기→광 에너지</small>"] --> lof[/"<b>전기 수신</b><br/><small>AC 전원 입력</small>"/]
+    dc3 -.->|When| sf1("<b>열 최소화</b><br/><small>냉각팬 작동</small>")
+    dc3 -.->|When| sf2("<b>전력 최소화</b><br/><small>절전 모드</small>")
+    dc2 -.->|When| sf3("<b>신호 변환</b><br/><small>디지털→아날로그</small>")
+    lof2[/"<b>신호 수신</b><br/><small>HDMI/VGA 입력</small>"/] --> sf4("<b>신호 전달</b><br/><small>영상 데이터 전송</small>") -.-> sf3
+    classDef basic fill:#1E3A5F,stroke:#1E3A5F,color:#fff,font-weight:bold,font-size:16px
+
+위 예시는 참고용입니다. 프로젝트 "{project}"에 맞는 고유한 FAST Diagram을 생성하세요.
+총 노드 수: 18~25개. 순수 Mermaid 코드만 출력하세요. 설명이나 마크다운 코드블록 없이."""
+
+    try:
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=api_key)
+        resp = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[prompt],
+            config=types.GenerateContentConfig(temperature=0.3, max_output_tokens=3500),
+        )
+        code = resp.text.strip()
+        # 마크다운 코드블록 제거
+        if code.startswith("```"):
+            code = code.split("\n", 1)[1] if "\n" in code else code[3:]
+        if code.endswith("```"):
+            code = code[:-3].strip()
+        if code.startswith("mermaid"):
+            code = code[7:].strip()
+        return jsonify({"mermaid_code": code})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     print(f"VE Dashboard starting...")
     print(f"  DB: Supabase PostgreSQL ({os.getenv('SUPABASE_DB_HOST')})")
     print(f"  KG: {KG_DIR}")
     app.run(debug=True, port=5000, host="127.0.0.1")
-

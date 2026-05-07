@@ -29,8 +29,12 @@
 18. [Phase 18: Git 배포 준비](#phase-18)
 19. [Phase 19: Amazon Lightsail 프로덕션 배포](#next-lightsail)
 20. [Phase 20: 프로덕션 마감 — DNS, UI, 솔루션 연동](#phase-20)
-21. [최종 데이터베이스 현황](#final-status)
-22. [기술적 교훈 및 시행착오 기록](#lessons-learned)
+21. [Phase 21: ML Hybrid RAG Engine 도입](#phase-21)
+22. [Phase 22: Multi-Agent VE Intelligence](#phase-22)
+23. [Phase 23: 비동기 라운드테이블 최적화](#phase-23)
+24. [최종 데이터베이스 현황](#final-status)
+25. [기술적 교훈 및 시행착오 기록](#lessons-learned)
+
 
 ---
 
@@ -607,6 +611,95 @@ if not p.exists() and ('\\' in fpath or 'C:' in fpath):
 
 ---
 
+## Phase 21: ML Hybrid RAG Engine 도입 <a id="phase-21"></a>
+
+> **상태**: ✅ 완료 (2026-05-06)
+> **핵심**: 키워드 매칭 → Embedding 시맨틱 검색 + KG 구조 매칭 + Gemini RAG
+
+### 21.1 문제 진단 (AS-IS)
+- **AI VE 자문** 페이지가 `cube_taxonomy.py`의 키워드 매칭(~150개)에만 의존
+- `SPACE_KEYWORDS`에 없는 표현 → 매칭 실패 ("지붕 물 새는 문제" → "옥상 방수" 연결 불가)
+- 동의어, 유사어, 복합 조건 질의 처리 불가
+- 유사 대안 추천 기능 없음
+
+### 21.2 구현 — Tier 1: Embedding 시맨틱 검색
+- **모델**: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (384차원, 한국어 지원)
+- **인덱싱**: 727개 대안 × (title + original_desc + alternative_desc + how2_name + space + value_type)
+- **저장**: `data/embeddings/ve_embeddings.npz` (벡터), `ve_metadata.json` (메타)
+- **검색**: 코사인 유사도 (L2 정규화 후 내적) → Top-K 반환
+- **빌드 시간**: ~14초 (CPU, GPU 불필요)
+
+### 21.3 구현 — Tier 2: Hybrid RAG
+```
+User Query → Step 1: Embedding Search (Top 20)
+           → Step 2: KG Hop 매칭 (Space/HOW2 구조)
+           → Step 3: 복합 스코어 (0.6×Semantic + 0.4×KG)
+           → Step 4: (선택) Gemini RAG 자연어 분석 답변
+```
+
+### 21.4 새 API 엔드포인트
+| 엔드포인트 | 설명 |
+|---|---|
+| `GET /api/search?q=` | 시맨틱 검색 (Embedding Only) |
+| `GET /api/ai/search?q=&gemini=true` | 하이브리드 RAG (Embedding + KG + Gemini) |
+| `GET /api/alternatives/<num>/similar` | 유사 대안 추천 (벡터 유사도) |
+
+### 21.5 프론트엔드 변경
+- **AI VE 자문 페이지**: 검색 모드 선택기 (Hybrid / Semantic / KG Legacy)
+- **유사도 바**: 각 결과에 시맨틱 유사도 + KG 점수 시각화
+- **Gemini AI 분석 토글**: 체크 시 자연어 비교 분석 답변 생성
+- **상세 모달**: "유사 대안 (Embedding 기반)" 섹션 추가 (비동기 로드)
+- **Hybrid RAG 시각화**: 시맨틱 매칭은 점선, KG 매칭은 실선으로 구분
+
+### 21.6 검증 결과
+| 질의 | 기존 (KG Only) | 개선 (Hybrid RAG) |
+|---|---|---|
+| "옥상 방수 VE 대안" | 5건 (키워드 매칭) | **10건** (1위: 대안-191 옥상 방수 공법 변경, 83.5%) |
+| "학교 건물 외벽 에너지 효율" | 0건 (키워드 없음) | **10건** (1위: 대안-685 지붕층 철골 최적화, 38.8%) |
+| "LED 조명 전기료 절감" | 0건 | **10건** (1위: 대안-200 전등 배선 시스템, 71.7%) |
+| "지하주차장 바닥 마감재" | 0건 | **10건** (1위: 대안-520 배관 보온재, 88.8%) |
+
+### 21.7 파일 추가
+- `src/semantic_search.py` — Embedding 시맨틱 검색 엔진 (360 LOC)
+- `data/embeddings/` — 임베딩 인덱스 (gitignore)
+
+### 21.8 구현 — Tier 3: 자동 분류 ML
+- **모델**: TF-IDF (5000 features, bigram) + LinearSVC
+- **HOW2 분류기**: 511 samples, 40 classes → **교차검증 정확도 38.0%** (±4.2%)
+  - 40개 대공종에 걸쳐 데이터가 분산되어 있어 현재 정확도는 낮음
+  - 데이터 1,000건 이상 시 60%+ 예상
+- **ValueType 분류기**: 727 samples, 4 classes → **교차검증 정확도 63.3%** (±7.0%)
+  - 4개 클래스(가치혁신형/비용절감형/성능강조형/성능향상형)로 실용적 수준
+- **API**: `POST /api/classify` — 새 대안 텍스트 → HOW2 + ValueType 자동 예측
+- **저장**: `data/ml_models/how2_classifier.pkl`, `vtype_classifier.pkl`
+
+### 21.9 구현 — Tier 4: 클러스터링 인사이트
+- **알고리즘**: K-Means (k=8, n_init=10)
+- **실루엣 점수**: 0.0538 (자연어 텍스트 기반이므로 기대치에 부합)
+- **클러스터 자동 라벨링**: 가장 빈번한 HOW2 + Space + ValueType 결합
+- **대표 대안**: 각 클러스터 중심(centroid)에 가장 가까운 대안
+- **API**: `GET /api/clusters`, `GET /api/clusters/<id>`
+- **대시보드**: Overview 페이지 하단에 8개 클러스터 카드 시각화
+
+| 클러스터 | 라벨 | 크기 | 평균 절감율 | 평균 가치변화 |
+|---|---|---|---|---|
+| 0 | 배선배관 / 전체 / 가치혁신형 | 82건 | +2.87% | +36.5% |
+| 1 | 우오수및배수 / 전체 / 가치혁신형 | 100건 | +1.31% | +56.6% |
+| 2 | 방수코킹 / 전체 / 비용절감형 | 108건 | +0.17% | +13.7% |
+| 3 | 철근콘크리트 / 구조체 / 가치혁신형 | 141건 | +0.01% | +50.9% |
+| 4 | 정보통신설비 / 도로 / 성능강조형 | 50건 | +1.20% | +16.4% |
+| 5 | 배관설비 / 전체 / 가치혁신형 | 86건 | 0% | +43.3% |
+| 6 | 창호 / 계단실 / 가치혁신형 | 82건 | +0.11% | +30.9% |
+| 7 | 배선배관 / 전체 / 가치혁신형 | 78건 | +1.77% | +53.7% |
+
+### 21.10 전체 파일 추가 요약
+- `src/semantic_search.py` — Tier 1~2 (시맨틱 검색 + Hybrid RAG)
+- `src/ml_classifier.py` — Tier 3~4 (자동 분류 + 클러스터링)
+- `data/embeddings/` — 임베딩 인덱스 (gitignore)
+- `data/ml_models/` — 분류기 + 클러스터링 결과 (gitignore)
+
+---
+
 ## 최종 데이터베이스 현황 <a id="final-status"></a>
 
 ### 테이블별 레코드 수 (2026-05-05 기준)
@@ -699,6 +792,8 @@ if not p.exists() and ('\\' in fpath or 'C:' in fpath):
 │   ├── app.py                    # Flask 메인 앱 (Supabase PostgreSQL)
 │   ├── config.py                 # 경로/DB 설정
 │   ├── cube_taxonomy.py          # CUBE 3축 분류 엔진 (WHERE/WHAT/HOW)
+│   ├── semantic_search.py        # ML 시맨틱 검색 + Hybrid RAG
+│   ├── ml_classifier.py          # ML 분류 엔진 (HOW1/HOW2/ValueType)
 │   ├── kg_builder.py             # KG v2 — CUBE 기반 (10노드, 8엣지 타입)
 │   ├── kg_visualizer.py          # KG 시각화 (matplotlib + vis-network)
 │   ├── ai_enhancer.py            # Gemini 2.0 Flash AI 서술 + 교차검증
@@ -714,24 +809,231 @@ if not p.exists() and ('\\' in fpath or 'C:' in fpath):
 │   ├── setup_supabase.py         # Supabase 테이블 생성
 │   ├── migrate_to_supabase.py    # SQLite → Supabase 마이그레이션
 │   ├── extract_002~009.py        # 개별 PDF 추출기 (8개)
+│   ├── agents/                   # Multi-Agent VE 시스템 (Phase 22, NEW)
+│   │   ├── __init__.py
+│   │   ├── schemas.py            # 입출력 스키마 (ProjectBrief, AgentRequest 등)
+│   │   ├── ve_leader.py          # VE Leader + DB Search + Idea + Domain Agent
+│   │   ├── fast_agent.py         # FAST 기능 분석 + Mermaid
+│   │   └── roundtable.py         # 라운드테이블 토론 엔진
 │   ├── templates/
 │   │   ├── landing.html          # WebGL 히어로 랜딩 페이지
-│   │   └── index.html            # SPA 대시보드 (6페이지)
+│   │   └── index.html            # SPA 대시보드 (7페이지, VE Agent 추가)
 │   └── static/
 │       ├── css/dashboard.css     # SaaS 디자인 시스템
 │       ├── js/dashboard.js       # 차트 + KG + AI 자문 로직
+│       ├── js/ve-agent.js        # VE 라운드테이블 채팅 UI (NEW)
 │       └── images/               # 랜딩 페이지 이미지
+├── .ve_SKILL/                    # VE Agent SKILL 파일 (10개)
+│   ├── SKILL_Architect.md
+│   ├── SKILL_Civil.md
+│   ├── SKILL_Electronic.md
+│   ├── SKILL_Mechanic.md
+│   ├── SKILL_Plumbing.md
+│   ├── SKILL_Landscape.md
+│   ├── SKILL_idea_developer.md
+│   ├── SKILL_FAST_Diagram_Developer.md
+│   ├── SKILL_data_analyst.md
+│   └── SKILL_Report_Writer.md
 ├── data/
 │   ├── extracted/ ~ extracted_009/  # 추출 JSON (gitignore)
 │   ├── images/ ~ images_002/       # 추출 이미지 (gitignore)
 │   ├── db/                         # SQLite DB (gitignore)
+│   ├── embeddings/                 # ML 임베딩 인덱스 (gitignore)
+│   │   ├── ve_embeddings.npz       # 727×384 벡터 행렬
+│   │   └── ve_metadata.json        # 대안 메타데이터
 │   └── kg/                         # Knowledge Graph (git 추적)
 │       ├── ve_knowledge_graph.graphml
 │       ├── kg_stats.json
 │       ├── kg_interactive_viewer.html
 │       └── *.png (시각화 차트 3개)
 ├── docs/
-│   ├── PRD_implementation_plan.md
-│   └── implementation_and_modification_processes.md
-└── implementation_and_modification_processes.md  # 이 문서 (루트 복사본)
+│   ├── PRD_implementation_plan.md          # Phase 1~9 구현 계획
+│   ├── ml_implementation_report.md         # ML 도입 보고서
+│   └── multi_agent_risk_assessment.md      # Multi-Agent 잠재력/한계 평가
+└── implementation_and_modification_processes.md  # 이 문서
 ```
+
+---
+
+## Phase 22: Multi-Agent VE Intelligence <a id="phase-22"></a>
+
+> **작업일**: 2026-05-06 ~ 2026-05-07
+> **목표**: VE 라운드테이블 토론 시스템 — AI Agent들이 캐릭터로 등장하여 순차 토론
+
+### 22.1 구현 완료 항목
+
+| Task | 파일 | 내용 | 상태 |
+|---|---|---|---|
+| 29 | `src/agents/schemas.py` | ProjectBrief, DesignAnalysis, CostBreakdown 스키마 | ✅ |
+| 30 | `src/agents/schemas.py` | AgentRequest/Response, Step별 Result 타입 | ✅ |
+| 31 | `src/agents/ve_leader.py` | VE Leader 오케스트레이터 (세션 관리) | ✅ |
+| 32 | `src/agents/ve_leader.py` | DB Search Agent (시맨틱 검색 래핑) | ✅ |
+| 33 | `src/agents/ve_leader.py` | Idea Agent (Gemini 아이디어 도출) | ✅ |
+| 34 | `src/agents/ve_leader.py` | Domain Agent (6개 SKILL 기반 검증) | ✅ |
+| 35 | `src/agents/fast_agent.py` | FAST 기능 분석 + Mermaid 다이어그램 | ✅ |
+| 36 | `src/agents/ve_leader.py` | Report Agent (보고서 초안 Markdown) | ✅ |
+| 37 | `src/app.py` | API 7개 (VE Session 5 + Roundtable 2) | ✅ |
+| 38 | `index.html` + `ve-agent.js` | 대시보드 "07. VE Agent" 라운드테이블 UI | ✅ |
+| — | `src/agents/roundtable.py` | 라운드테이블 토론 엔진 (SKILL 기반 순차 발언) | ✅ |
+
+### 22.2 라운드테이블 토론 흐름
+
+```
+Step 1: 🎩 VE Leader       — 프로젝트 요약 + 분석 방향 제시
+Step 2: 🏗 건축/⚡전기 등   — 도메인 전문가 순차 발언 (SKILL 기반)
+Step 3: 📈 Data Analyst    — DB 727건 유사 사례 검색 결과 보고
+Step 4: 💡 Idea Developer  — 아이디어 3~4개 제안
+Step 5: 📊 FAST 전문가     — 기능 분해 + 비용 불균형 지적
+Step 6: 🎩 VE Leader       — 종합 정리 + 다음 단계 제안
+```
+
+### 22.3 API 엔드포인트
+
+| Method | Path | 설명 |
+|---|---|---|
+| POST | `/api/ve/session` | VE 분석 세션 (기존 방식) |
+| GET | `/api/ve/session/<id>/status` | 세션 상태 |
+| GET | `/api/ve/session/<id>/result` | 세션 결과 |
+| POST | `/api/ve/session/<id>/feedback` | 사용자 피드백 |
+| GET | `/api/ve/sessions` | 세션 목록 |
+| **POST** | **`/api/ve/roundtable`** | **라운드테이블 토론 실행 (파일 업로드 지원)** |
+| **GET** | **`/api/ve/roundtable/<id>/messages`** | **토론 메시지 조회** |
+
+### 22.4 CLI 테스트 결과 (ve_leader.py)
+
+```
+[VE Session b27316bb] 시작: 테스트 공동주택 신축공사
+  Step 1: 분석 대상 2건 선정 (건축, 전기)
+  Step 2: 유사 사례 검색 (Hybrid RAG, 727건 DB)
+  Step 3: 아이디어 3건 도출 (Gemini Flash)
+  Step 4: 도메인 검증 6건 (전기 적극추천 90%, 구조 조건부추천 70%)
+  Step 5: 보고서 초안 1,324자 자동 생성
+  → 총 소요: ~53초
+```
+
+### 22.5 대시보드 UI
+
+- 사이드바 "07. VE Agent" 메뉴 추가
+- 좌측: 파일 업로드(PDF/TXT 드래그&드롭) + 프로젝트 설명 직접 입력 + 참여 전문가 선택
+- 우측: 채팅방 형태 토론 뷰 (Agent 아바타 + 이름 + 타이핑 애니메이션)
+
+### 22.6 알려진 이슈
+
+| 이슈 | 상태 | 내용 |
+|---|---|---|
+| ⚠ 응답 시간 | 미해결 | Gemini API 6~8회 순차 호출 → 60~90초 소요 |
+| ⚠ 동기 처리 | 미해결 | 브라우저가 응답까지 블로킹 → 사용자 대기 필요 |
+| ✅ 환각 방지 | 적용됨 | temperature 0.3~0.5, DB 근거만 인용, "AI 초안" 명시 |
+| ✅ Graceful Degradation | 적용됨 | 도면/내역 AI 없어도 사용자 입력만으로 진행 가능 |
+
+---
+
+## 다음 세션 작업 (재부팅 후)
+
+### Lightsail 배포 동기화
+
+```
+1) git push → Lightsail 서버 git pull → PM2 재시작
+2) 프로덕션 환경에서 비동기 라운드테이블 동작 검증
+```
+
+### 선택적 개선
+
+| 작업 | 우선순위 | 내용 |
+|---|---|---|
+| Lightsail 배포 동기화 | 높음 | git push → PM2 재시작 |
+| 라운드테이블 UI 개선 | 중간 | 진행 단계 프로그레스바, 메시지 스타일 고도화 |
+| SSE 스트리밍 전환 | 낮음 | 폴링 → Server-Sent Events로 전환 (실시간성 향상) |
+
+---
+
+## Phase 23: 비동기 라운드테이블 최적화 <a id="phase-23"></a>
+
+> **작업일**: 2026-05-07
+> **목표**: 60~90초 블로킹 응답 → 비동기 처리 + 실시간 폴링 UI
+
+### 23.1 문제 진단
+
+| 항목 | AS-IS | 영향 |
+|---|---|---|
+| API 처리 방식 | **동기** — Gemini 6~8회 순차 호출 완료까지 블로킹 | 60~90초 대기 |
+| 프론트엔드 | **일괄 수신** — 응답 완료 후 전체 메시지 한꺼번에 표시 | "로딩만 됨" 인식 |
+| 사용자 경험 | 진행 상태 불명 — 로딩 스피너만 표시 | 이탈 위험 |
+
+### 23.2 해결 — 비동기 아키텍처
+
+```
+[AS-IS]  POST /roundtable → (60~90초 블로킹) → {messages: [...]}
+
+[TO-BE]  POST /roundtable → (즉시) → {session_id: "abc123"}
+         GET  /roundtable/abc123/messages?since=0 → {new_messages: [...], status: "running"}
+         GET  /roundtable/abc123/messages?since=3 → {new_messages: [...], status: "running"}
+         GET  /roundtable/abc123/messages?since=7 → {new_messages: [], status: "completed"}
+```
+
+### 23.3 백엔드 변경 (`roundtable.py`)
+
+- `RoundtableSession`에 `threading.Lock` 추가 → 메시지 축적 thread-safe
+- `_run_roundtable_worker()` — 기존 동기 로직을 워커 함수로 분리
+- `start_roundtable_async()` — daemon thread로 워커 실행, 세션 즉시 반환
+- `run_roundtable()` — 하위 호환용 동기 함수 유지
+
+### 23.4 백엔드 변경 (`app.py`)
+
+- `POST /api/ve/roundtable` — `start_roundtable_async()` 호출, 세션 ID 즉시 반환
+- `GET /api/ve/roundtable/<id>/messages?since=<n>` — 새 메시지만 반환하는 폴링 API
+  - `since` 파라미터: 이전 응답의 `total_count` 전달 → 새 메시지만 반환
+  - `status` 필드: `running` | `completed` | `failed`
+  - `error` 필드: 실패 시 에러 메시지
+
+### 23.5 프론트엔드 변경 (`ve-agent.js`)
+
+| 기능 | 변경 내용 |
+|---|---|
+| 세션 시작 | POST 즉시 반환 → 세션 ID 수신 |
+| 메시지 수신 | **1.2초 폴링** (최대 120회 = 144초 제한) |
+| 실시간 표시 | 새 메시지 도착 시 즉시 타이핑 애니메이션 |
+| 로딩 표시 | **바운스 인디케이터** (·· ·) + "AI 전문가 분석 중..." 텍스트 |
+| 상태 표시 | 준비 중 → 토론 중 → 완료/오류 단계별 배지 전환 |
+| Agent 목록 | 발언하는 Agent가 등장할 때마다 좌측 패널에 추가 |
+
+### 23.6 개선 효과
+
+| 지표 | AS-IS | TO-BE |
+|---|---|---|
+| 첫 응답 시간 | **60~90초** | **< 1초** (세션 ID 즉시 반환) |
+| 첫 메시지 표시 | 60~90초 후 일괄 | **~10초** (VE Leader 개회사) |
+| 사용자 인지 | "로딩만 됨" | Agent별 순차 발언 실시간 확인 |
+| 타임아웃 위험 | 높음 (Gunicorn 120초) | 없음 (각 폴링 < 1초) |
+| 에러 복구 | 전체 세션 실패 | 부분 결과 유지 + 에러 표시 |
+
+### 23.7 파일 변경 요약
+
+| 파일 | 변경 | LOC |
+|---|---|---|
+| `src/agents/roundtable.py` | 비동기 워커 + Lock 추가 | 250 → 260 |
+| `src/app.py` | 라운드테이블 API 비동기 전환 | ~30줄 수정 |
+| `src/static/js/ve-agent.js` | 폴링 기반 UI + 타이핑 인디케이터 | 197 → 230 |
+
+## Phase 24: AI VE 대시보드 시각화 최적화 및 렌더링 방식 이미지 추출 <a id="phase-24"></a>
+
+### 24.1 AI VE 자문 지식 그래프 레이아웃 최적화
+- **문제점**: `05. AI VE 자문` 페이지에서 Hybrid RAG 지식 그래프 영역(`ai-kg-container`)이 `height: 400px`로 고정되어 있어 넓은 화면에서도 시각화 박스가 작게 출력되는 문제.
+- **해결 방안**: 
+  - `dashboard.css` 내 `.chat-panel`에 `display: flex; flex-direction: column`을 적용.
+  - `#ai-kg-container`에 `flex: 1` 및 `min-height: 500px`를 설정하여 부모 요소의 전체 높이에 맞추어 동적으로 시원하게 확장되도록 CSS 레이아웃을 100% 대응.
+
+### 24.2 대안 원안/대안 이미지 부재 및 빈 박스(회색 영역) 표출 오류
+- **문제점**: 
+  1. 초기 파이프라인 개발 시 강원 신청사(1~107번)에만 이미지가 추출되었고, 108번~727번(조달청, 퇴계동 등)의 대안에는 DB에 이미지 정보가 존재하지 않아 모달창에 개요도가 나타나지 않음.
+  2. 단순 이미지 추출 API(`fitz.get_images`)를 활용해 누락된 이미지를 추출(`extract_images_005.py`, `extract_images_006.py`)했으나, "원안" 영역의 도면이 벡터 그래픽(Vector)이거나 바탕 회색 박스로 구성되어 있어 의미 없는 바탕 이미지(회색 박스)만 추출되는 심각한 오류 발생.
+- **해결 방안 (Robust Render Extraction)**: 
+  - 단순 객체 추출을 폐기하고 **PDF 페이지 전체를 고해상도 픽스맵(Pixmap)으로 렌더링한 후, 지정된 X, Y 영역 좌표를 기준으로 자르는(Crop) 방식** 채택.
+  - `extract_images_robust.py` 신규 개발:
+    - **조달청 사례**: 좌(원안) / 우(대안) 레이아웃에 맞춰 `fitz.Rect(35, 195, 290, 470)` 및 `(305, 195, 560, 470)` 크롭.
+    - **퇴계동 사례**: 상(원안) / 하(대안) 레이아웃에 맞춰 `fitz.Rect(110, 80, 560, 400)` 및 `(110, 410, 560, 650)` 크롭.
+  - 추출된 고품질 이미지를 로컬(`data/images`)에 저장 및 Supabase DB에 적재하여, 벡터 드로잉 라인과 텍스트까지 육안으로 보이는 완벽한 형태로 표출하도록 수정.
+
+### 24.3 Flask 로컬 서버 중단 트러블슈팅
+- **문제점**: 작업 중 포트 오류 혹은 IDE 세션 만료로 Flask 서버(`:5000`)가 중단되어 대시보드 접근 불가 현상 발생.
+- **해결 방안**: `netstat -ano | findstr :5000`을 통해 포트 비활성을 확인 후, `python src/app.py`를 재기동하여 서비스 접근 및 이미지 매핑 테스트 환경 복구 완료.
