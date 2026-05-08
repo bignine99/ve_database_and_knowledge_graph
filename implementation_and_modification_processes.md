@@ -1049,3 +1049,10 @@ Step 6: 🎩 VE Leader       — 종합 정리 + 다음 단계 제안
 - **Root Cause**: The zip file (images.zip) containing the newly extracted robust images (from Phase 24) was created on Windows using Compress-Archive. When extracted on the AWS Linux server using unzip, Linux failed to recognize backslashes as path separators, resulting in files named with literal backslashes (e.g., pps_428\\pps_428_original_diagram.jpeg) instead of placing them in subdirectories. The backend API (pp.py), attempting to read within the subdirectories (server_path.exists()), failed to find the files and fell back to returning 404 NOT FOUND.
 - **Fix applied**: Created and executed a Python script on the remote AWS server to iterate through all files containing \\ in their name. The script dynamically created the required subdirectories (pps_428/ etc.) and moved the files, fixing 737 erroneously named assets.
 - **Verification**: Verified via curl that serve_abs_image now accurately serves the 200 OK responses, successfully linking Windows-stored DB paths to the resolved Linux directory structure.
+
+
+### Phase 26: VE Roundtable Dependency Resolution (2026-05-08)
+**Issue: VE Roundtable Agent Crash**
+- **Symptoms**: When initiating a VE Roundtable session, all agent responses returned the error: [오류: cannot import name \'genai\' from \'google\'].
+- **Root Cause**: The Python backend codebase was updated to use the new official Google Gemini SDK (google-genai package) via rom google import genai. However, the production AWS Lightsail servers virtual environment only had the legacy google-generativeai package installed, leading to an ImportError when the roundtable endpoint was triggered.
+- **Fix applied**: Connected to the AWS Lightsail server via SSH and manually installed the missing google-genai package into the production Python virtual environment (/home/ubuntu/ve_database/venv/bin/pip install google-genai). The PM2 process e-dashboard was then restarted to load the new dependency, restoring full functionality to the Multi-Agent Roundtable.
