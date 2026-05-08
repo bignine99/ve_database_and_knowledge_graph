@@ -1056,3 +1056,13 @@ Step 6: 🎩 VE Leader       — 종합 정리 + 다음 단계 제안
 - **Symptoms**: When initiating a VE Roundtable session, all agent responses returned the error: [오류: cannot import name \'genai\' from \'google\'].
 - **Root Cause**: The Python backend codebase was updated to use the new official Google Gemini SDK (google-genai package) via rom google import genai. However, the production AWS Lightsail servers virtual environment only had the legacy google-generativeai package installed, leading to an ImportError when the roundtable endpoint was triggered.
 - **Fix applied**: Connected to the AWS Lightsail server via SSH and manually installed the missing google-genai package into the production Python virtual environment (/home/ubuntu/ve_database/venv/bin/pip install google-genai). The PM2 process e-dashboard was then restarted to load the new dependency, restoring full functionality to the Multi-Agent Roundtable.
+
+
+### Phase 27: Dockerization of VE Dashboard (2026-05-08)
+**Issue: Program was not using Docker**
+- **Symptoms**: The application was running natively on servers using PM2 and Virtual Environments. The user requested Docker integration to ensure consistent deployment environments, easier environment management, and to avoid dependency conflicts (such as the recent google-genai issue).
+- **Actions Taken**:
+  1. **requirements.txt updated**: Added google-genai>=2.0.0 to explicitly track the missing Gemini SDK dependency identified in Phase 26.
+  2. **Dockerfile created**: Implemented a python:3.11-slim based image. It sets up working directories, securely copies necessary requirements, installs system-level (libpq-dev) and Python dependencies, and uses gunicorn as the production entrypoint on port 5000.
+  3. **.dockerignore configured**: Added directories like env/, .env, .git/, and data/ to prevent sensitive or unnecessary files from bloating the Docker image context.
+  4. **docker-compose.yml created**: Set up service orchestration mapping port 5003 (host) to 5000 (container), mapping the ./data directory as a persistent volume, and passing the .env file for secure environment variables.

@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  ve-dashboard:
+    build: .
+    container_name: ve_dashboard_app
+    ports:
+      - "5003:5000"
+    volumes:
+      # Map local data directory to persist images and other generated artifacts
+      - ./data:/app/data
+    env_file:
+      - .env
+    restart: unless-stopped
+    environment:
+      # Optional: override env vars here if needed
+      - FLASK_ENV=production
