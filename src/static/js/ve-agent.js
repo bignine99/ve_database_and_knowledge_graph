@@ -159,7 +159,9 @@
         await sleep(POLL_INTERVAL);
 
         const msgRes = await fetch(`/api/ve/roundtable/${sessionId}/messages?since=${since}`);
-        if (!msgRes.ok) break;
+        if (!msgRes.ok) {
+           throw new Error('서버와의 연결이 끊어졌거나 세션을 찾을 수 없습니다.');
+        }
         const msgData = await msgRes.json();
 
         // 새 메시지 처리
@@ -213,7 +215,15 @@
         }
       }
 
+      // If loop finished (timeout or break without completion), clean up indicator
+      if (typingIndicator && typingIndicator.parentNode) {
+          typingIndicator.remove();
+      }
+
     } catch (e) {
+      if (typeof typingIndicator !== 'undefined' && typingIndicator.parentNode) {
+          typingIndicator.remove();
+      }
       addSystemMsg('\u274C \uC624\uB958: ' + e.message);
       statusBadge.textContent = '\uC624\uB958';
       statusBadge.style.background = '#fee2e2';
