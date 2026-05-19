@@ -888,18 +888,20 @@ def ve_roundtable():
         project_name = request.form.get("project_name", f.filename)
         disc_raw = request.form.get("disciplines", "건축,전기")
         disciplines = [d.strip() for d in disc_raw.split(",") if d.strip()]
+        api_key = request.form.get("api_key", "").strip()
     else:
         data = request.get_json(silent=True) or {}
         project_text = data.get("project_text", "")
         project_name = data.get("project_name", "VE 프로젝트")
         disciplines = data.get("disciplines", ["건축", "전기"])
+        api_key = data.get("api_key", "").strip()
 
     if not project_text:
         return jsonify({"error": "프로젝트 정보가 없습니다. 파일을 업로드하거나 텍스트를 입력하세요."}), 400
 
     try:
         # 비동기 시작 — 세션 즉시 반환
-        session = start_roundtable_async(project_text, project_name, disciplines)
+        session = start_roundtable_async(project_text, project_name, disciplines, api_key=api_key)
         _roundtable_sessions[session.session_id] = session
         return jsonify({
             "session_id": session.session_id,
@@ -963,8 +965,8 @@ def ve_fast_diagram():
     project = data.get("project", "건축 시설")
     higher = data.get("higher_function", "")
     desc = data.get("description", "")
+    api_key = data.get("api_key", "").strip() or os.environ.get("GEMINI_API_KEY", "")
 
-    api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
         return jsonify({"error": "GEMINI_API_KEY not set"}), 500
 

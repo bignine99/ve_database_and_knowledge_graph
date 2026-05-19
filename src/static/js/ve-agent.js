@@ -90,6 +90,7 @@
   startBtn.addEventListener('click', async () => {
     const projectText = document.getElementById('rt-project-text').value.trim();
     const projectName = document.getElementById('rt-project-name').value.trim();
+    const apiKey = document.getElementById('rt-api-key') ? document.getElementById('rt-api-key').value.trim() : '';
 
     if (!uploadedFile && !projectText) {
       alert('\uD504\uB85C\uC81D\uD2B8 \uD30C\uC77C\uC744 \uC5C5\uB85C\uB4DC\uD558\uAC70\uB098 \uC124\uBA85\uC744 \uC785\uB825\uD558\uC138\uC694.');
@@ -123,12 +124,13 @@
         formData.append('file', uploadedFile);
         formData.append('project_name', projectName || uploadedFile.name);
         formData.append('disciplines', disciplines.join(','));
+        if (apiKey) formData.append('api_key', apiKey);
         res = await fetch('/api/ve/roundtable', { method: 'POST', body: formData });
       } else {
         res = await fetch('/api/ve/roundtable', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project_text: projectText, project_name: projectName || 'VE \uD504\uB85C\uC81D\uD2B8', disciplines }),
+          body: JSON.stringify({ project_text: projectText, project_name: projectName || 'VE \uD504\uB85C\uC81D\uD2B8', disciplines, api_key: apiKey }),
         });
       }
 
