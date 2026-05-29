@@ -1252,4 +1252,90 @@ Step 6: 🎩 VE Leader       — 종합 정리 + 다음 단계 제안
 |---|---|
 | `9717856` | `feat: Add Gemini API Key input UI and Hero Page button` |
 | `77037fb` | `fix: Correct pm2 process name typo in deploy script` |
+| `9717856` | `feat: Add Gemini API Key input UI and Hero Page button` |
+| `77037fb` | `fix: Correct pm2 process name typo in deploy script` |
 | `6649ce0` | `fix: Update hero button link to root path` |
+| `46e9009` | `feat: Fix image serving logic and configure Firebase Hosting for Cloud Run domain mapping` |
+
+---
+
+## Phase 35: AWS Lightsail에서 Google Cloud (Cloud Run & Firebase Hosting) 마이그레이션 및 이미지 서빙 오류 해결 (2026-05-29) <a id="phase-35"></a>
+
+### 35.1 문제 진단
+
+| 분류 | 내용 | 원인 | 영향 |
+|---|---|---|---|
+| **이미지 서빙 오류** | 원안/대안 도면 이미지 깨짐 | `.dockerignore` 및 `.gcloudignore`에서 `data/*` 패턴으로 모든 리소스를 무시하여 컨테이너 내부에 `images/` 폴더가 복사되지 않음 | 대시보드 상세 보기 모달 창에서 이미지 부재(회색 404 박스) 발생 |
+| **하드코딩 경로** | 이미지 서빙 매핑 경로 고정 | `src/app.py`의 `serve_abs_image` API가 기존 AWS 경로 `/home/ubuntu/ve_database`로 고정됨 | 컨테이너 환경(`/app`)에서 파일 존재 여부를 판별하지 못함 |
+| **도메인 매핑 제약** | `asia-northeast3` 리전 매핑 불가 | Cloud Run 자체 커스텀 도메인 매핑을 서울 리전에서 지원하지 않음 | gcloud CLI 및 GCP 콘솔 도메인 매핑 설정 시 리전 미지원 에러 발생 |
+| **GCP / Firebase 충돌** | Firebase Hosting 403 에러 | Firebase 프로젝트를 연동할 때 신규 프로젝트(`ninetynine-hub-497811-a6b3b`)를 생성하여 원래 Cloud Run 서비스가 있는 `ninetynine-hub-497811` 프로젝트와 불일치 | Firebase Hosting이 Cloud Run의 Admin API 권한 오류(403) 및 서비스 탐색 실패 발생 |
+
+### 35.2 해결 방안 및 기술 아키텍처
+
+```
+[사용자 요청] -> https://ve.ninetynine99.co.kr (CNAME)
+                 |
+                 v (글로벌 CDN & SSL 처리)
+        Firebase Hosting (ninetynine-hub-497811)
+                 |
+                 v (Rewrites 프록시)
+        Cloud Run (ve-dashboard:v4 / asia-northeast3)
+                 |
+                 +---> data/images/ (컨테이너 내부 이미지 서빙)
+                 +---> Supabase PostgreSQL (세션 풀러 연결)
+```
+
+### 35.3 백엔드 및 Docker 빌드 수정
+
+1. **상대 경로 및 BASE_DIR 매핑**:
+   * [`src/app.py`](file:///c:/Users/cho/Desktop/Temp/05_code1/260504_ve_database_development/src/app.py#L565)의 하드코딩된 AWS 주소를 `BASE_DIR / relative`로 동적으로 변경하여 가상 환경이나 컨테이너 내 어떤 워크디렉터리(`BASE_DIR = /app`)에서도 동작하도록 설계 수정.
+2. **Docker 빌드 범위 확장**:
+   * [`.dockerignore`](file:///c:/Users/cho/Desktop/Temp/05_code1/260504_ve_database_development/.dockerignore) 및 [`.gcloudignore`](file:///c:/Users/cho/Desktop/Temp/05_code1/260504_ve_database_development/.gcloudignore) 파일을 수정하여 `data/db/` 폴더(로컬 SQLite 백업용)만 무시하고 이미지(`data/images/`), AI JSON 추출물(`data/extracted/`), 의미검색 임베딩(`data/embeddings/`), 분류 모델(`data/ml_models/`)은 정상 빌드되도록 격리 해제.
+3. **Dockerfile 복사 명령어 수정**:
+   * [`Dockerfile`](file:///c:/Users/cho/Desktop/Temp/05_code1/260504_ve_database_development/Dockerfile)에서 기존 `./data/kg`만 가져오던 구문을 `COPY ./data /app/data/` 구문으로 교체하여 빌드에서 허용된 폴더가 전부 컨테이너 내부로 빌드 병합되도록 조치.
+4. **빌드 v4 배포**:
+   * `gcloud builds submit --tag asia-northeast3-docker.pkg.dev/ninetynine-hub-497811/ninetynine-apps/ve-dashboard:v4` 명령으로 신규 빌드를 수행하고 Cloud Run에 롤아웃(`ve-dashboard-00005-6rt`). 임시 디버깅 `/api/debug/paths`를 통해 내부 폴더 복사를 완벽히 검증.
+
+### 35.4 Firebase Hosting 프록시 통합
+
+1. **호스팅 설정 파일 작성**:
+   * [`firebase.json`](file:///c:/Users/cho/Desktop/Temp/05_code1/260504_ve_database_development/firebase.json)을 생성하여 `rewrites` 규칙을 통해 모든 트래픽(`**`)을 서울 리전(`asia-northeast3`)의 Cloud Run 서비스 `ve-dashboard`로 프록시 전달 설정.
+   * [`.firebaserc`](file:///c:/Users/cho/Desktop/Temp/05_code1/260504_ve_database_development/.firebaserc)를 생성하여 실제 GCP 프로젝트 ID인 `ninetynine-hub-497811`로 설정.
+   * `public/index.html`을 생성해 Firebase 호스팅 빌드 요구조건을 충족시킴.
+2. **Firebase 프로젝트 단일화**:
+   * 에러가 났던 개별 Firebase 프로젝트를 정리하고, 원래 Cloud Run이 올라가 있던 GCP 프로젝트 `ninetynine-hub-497811`에 Firebase Hosting 서비스를 병합 및 연동.
+3. **배포**:
+   * `npx firebase-tools deploy --only hosting`을 통해 호스팅 설정을 성공적으로 배포하여 `ninetynine-hub-497811.web.app` 임시 도메인 확보 및 프록시 확인.
+
+### 35.5 가비아 CNAME 연동 및 보안 강화
+
+1. **DNS 수정**:
+   * 가비아 DNS 설정 페이지에서 기존 AWS Lightsail 서버(`54.180.208.68`)의 와일드카드 규칙에서 `ve` 도메인을 우선 재정의하기 위해 **CNAME 레코드 (`ve` -> `ninetynine-hub-497811.web.app.`)**를 신규 한 줄 추가하여 저장. (기존 홈페이지 및 타 솔루션의 AWS A 레코드는 그대로 두어 타 서비스 무영향 확인)
+2. **보안 파일 격리**:
+   * GCP 서비스 계정 키 인증서(`ninetynine-hub-497811-cc50abd4ff93.json`)를 타 솔루션에서도 공용 참조할 수 있도록 공유 폴더 경로인 `C:\Users\cho\Desktop\Temp\..agent-core\`(로컬 Junction `.agent/` 폴더) 하위로 이동.
+   * `.gitignore` 및 `.gcloudignore` 파일에 `.agent/*.json` 패턴을 추가하여 절대 깃허브 및 GCP 빌드 상에 키가 유출되지 않도록 완벽 차단.
+
+### 35.6 배포 결과
+
+* **DNS 조회 검증**: `ve.ninetynine99.co.kr` 네임서버 조회 시 `ninetynine-hub-497811.web.app` CNAME이 정상 전파되어 응답 200 수신.
+* **SSL 보안 접속 검증**: 구글 글로벌 CDN 기반의 무료 SSL 인증서(HTTPS) 자동 발급이 신속하게 통과되어 연결 완료(HTTP 200 OK 접속 정상 가동).
+
+### 35.7 파일 변경 요약
+
+| 파일 | 변경 내용 | LOC |
+|---|---|---|
+| `src/app.py` | serve_abs_image의 AWS 하드코딩 경로를 BASE_DIR로 동적 대체 | +1줄, -1줄 |
+| `Dockerfile` | COPY 명령어를 ./data 전체 폴더 병합 구조로 확장 | +2줄, -3줄 |
+| `.dockerignore` | data/db/ 제외한 다른 데이터 폴더의 빌드 제외 차단 해제 | +1줄, -1줄 |
+| `.gcloudignore` | 데이터 폴더 복원 및 `.agent/*.json` 인증서 차단 필터링 추가 | +2줄, -2줄 |
+| `.gitignore` | `.agent/*.json` 인증서 보안 규칙 추가 | +1줄 |
+| `firebase.json` | Firebase 호스팅 -> Cloud Run 서울 리전 Proxy 규칙 정의 | 신규 생성 |
+| `.firebaserc` | 타겟 Firebase 프로젝트 ID 지정 | 신규 생성 |
+| `public/index.html` | 호스팅 배포를 위한 빈 껍데기 HTML 제공 | 신규 생성 |
+| `implementation_and_modification_processes.md` | Phase 35 마이그레이션 히스토리 추가 | +90줄 |
+
+### 35.8 Git 커밋 이력
+
+| 커밋 해시 | 메시지 |
+|---|---|
+| `46e9009` | `feat: Fix image serving logic and configure Firebase Hosting for Cloud Run domain mapping` |
