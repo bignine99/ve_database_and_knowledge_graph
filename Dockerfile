@@ -3,7 +3,8 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    PORT=8080
 
 # Set work directory
 WORKDIR /app
@@ -23,8 +24,8 @@ RUN pip install --upgrade pip && \
 # Copy application source code
 COPY ./src /app/src/
 
-# Expose port 5000
-EXPOSE 5000
+# Copy data files (except data/db ignored by .dockerignore)
+COPY ./data /app/data/
 
-# Create an entrypoint or command to run gunicorn
-CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "--timeout", "120", "src.app:app"]
+# Cloud Run uses PORT env var — shell form to expand $PORT
+CMD exec gunicorn -w 1 --threads 4 -b 0.0.0.0:$PORT --timeout 120 src.app:app

@@ -1066,3 +1066,190 @@ Step 6: 🎩 VE Leader       — 종합 정리 + 다음 단계 제안
   2. **Dockerfile created**: Implemented a python:3.11-slim based image. It sets up working directories, securely copies necessary requirements, installs system-level (libpq-dev) and Python dependencies, and uses gunicorn as the production entrypoint on port 5000.
   3. **.dockerignore configured**: Added directories like env/, .env, .git/, and data/ to prevent sensitive or unnecessary files from bloating the Docker image context.
   4. **docker-compose.yml created**: Set up service orchestration mapping port 5003 (host) to 5000 (container), mapping the ./data directory as a persistent volume, and passing the .env file for secure environment variables.
+
+
+### Phase 28: Resolving Multi-Process State Conflicts and 502 Errors (2026-05-08)
+**Issue 1: VE Roundtable Infinite Loading (UI Stuck at "AI 전문가 분석 중...")**
+- **Symptoms**: On the live site (`ve.ninetynine99.co.kr`), starting the VE Roundtable resulted in the UI hanging indefinitely on "AI 전문가 분석 중...", with no chat bubbles appearing, despite the backend successfully completing the session and generating 14 messages in the background.
+- **Root Cause**: The PM2 deployment was running `gunicorn -w 2` (two separate worker processes). However, the `_roundtable_sessions` variable in `app.py` is an in-memory dictionary. When the frontend started a session via `/api/ve/roundtable`, the session was stored in Worker A's memory. When the frontend polled for new messages (`/api/ve/roundtable/<id>/messages`), the request would often hit Worker B, which returned a `404 세션 없음` error. The frontend Javascript loop (`ve-agent.js`) caught this HTTP error and broke the loop but failed to clear the typing indicator, resulting in a permanent UI hang.
+- **Fix applied**: 
+  1. Updated the PM2 configuration to run Gunicorn with a single worker but multiple threads (`-w 1 --threads 4`) so that memory is shared across all concurrent requests.
+  2. Patched the polling loop in `src/static/js/ve-agent.js` to gracefully catch HTTP errors, remove the typing indicator, and display an appropriate error badge instead of silently hanging.
+
+**Issue 2: 502 Bad Gateway Error on AWS Lightsail**
+- **Symptoms**: Following the PM2 configuration update, the server threw a `502 Bad Gateway nginx/1.24.0 (Ubuntu)` error.
+- **Root Cause**: The PM2 command was executed directly against the `gunicorn` Python executable without explicitly setting the interpreter. PM2 defaulted to using Node.js to run the python file, which caused an immediate crash with `SyntaxError: Unexpected identifier 'gunicorn'`.
+- **Fix applied**: Deleted the broken PM2 process and restarted it using the `bash` interpreter explicitly (`pm2 start bash --name 've-dashboard' -- -c '/home/.../gunicorn ...'`). Verified that the process starts correctly and serves the dashboard.
+
+### Phase 29: Extracting and Uploading Missing Rail Project Images (2026-05-08)
+**Issue: Rail VE Alternatives (e.g. 271, 277) Missing Images on Frontend**
+- **Symptoms**: The frontend cards for alternatives belonging to the `kr_rail_2021_ve` project displayed no images, despite other projects showing them correctly.
+- **Root Cause**: During the initial data processing, the original PDF `002_국가철도공단_2021년 설계VE 사례집.pdf` was not parsed for images. Consequently, the Supabase `images` table contained zero records for the `kr_rail_2021_ve` project, and no physical image files were created or uploaded to the server's disk.
+- **Fix applied**:
+  1. Created a Python extraction script (`extract_images_rail.py`) utilizing `PyMuPDF` (fitz) to load the raw PDF locally.
+  2. The script queried the Supabase database for the `source_page` of each rail alternative, cropped the top and bottom regions of the page to extract the `original_diagram` and `alternative_diagram` respectively, and saved the JPEGs to the local `data/images` directory.
+  3. The script simultaneously inserted the image metadata and server file paths into the live Supabase PostgreSQL `images` table, successfully adding 212 new image records (total images increased from 720 to 932).
+  4. The newly extracted image folders were compressed into `rail_images.zip` (20MB) to be uploaded to the AWS server.
+- **Final Resolution & Server Recovery**:
+  - The AWS Lightsail instance exhausted its CPU burst capacity and memory (OOM) due to the heavy `npm run build` process for the Next.js applications (`ninetynine-hub` and `safetron-dashboard`). This caused a complete SSH timeout and `502 Bad Gateway` on the main domain.
+  - The user performed a manual instance reboot from the AWS console, which dynamically assigned a new Public IP (`54.180.208.68`).
+  - Upon reconnection to the new IP, it was verified that the Next.js builds had completed successfully prior to the crash, resolving the `502 Bad Gateway` error and restoring `https://ninetynine99.co.kr` to a stable HTTP 200 state.
+  - The `rail_images.zip` file was successfully transferred via SCP to the new AWS IP and extracted into `/home/ubuntu/ve_database/data/images/`.
+  - Final validation confirmed that the VE dashboard successfully fetches and renders the newly inserted original and alternative diagrams for the `kr_rail_2021_ve` project.
+
+### Phase 30: Restoring NNHomepage Solutions Visibility & Git Sync (2026-05-10)
+**Issue: "Value Engineering by AI" Solution Card Missing from Homepage**
+- **Symptoms**: The user noticed that the VE Database solution card, which was previously deployed, was missing from the live NNHomepage (`ninetynine99.co.kr`).
+- **Root Cause**: The NNHomepage infrastructure was migrated from NCP to a new AWS Lightsail server (`54.180.208.68`) today. The previous addition of the solution card was made directly on the old NCP server (or left uncommitted locally), and was never committed to the `NNHomepage` Git repository. When the new AWS Lightsail server was deployed using the Git repository, the solution card was lost due to the missing commit history.
+- **Fix applied**:
+  1. **Data Update**: Added the `solution-ve-database` card to `src/data/solutions.ts` (for the `/solutions` page).
+  2. **Main Page Visibility**: Added the VE Database card to `src/data/navigation.ts` to feature it prominently on the main homepage's "Explore Our Services" section.
+  3. **Git Sync**: Officially committed both changes to the local `NNHomepage` repository and pushed them to the remote GitHub repository to prevent future regressions.
+  4. **Deployment**: Uploaded the updated files to the AWS Lightsail server via SCP, ran `npm run build` to generate static pages, and restarted the `ninetynine-hub` PM2 process.
+- **Verification**: The "Value Engineering by AI" card is now prominently visible as the first item on both the main homepage and the solutions page.
+
+### Phase 31: Restoring ve-dashboard PM2 Process & 502 Error Resolution (2026-05-14)
+**Issue: 502 Bad Gateway Error on `ve.ninetynine99.co.kr`**
+- **Symptoms**: Following an AWS Lightsail instance reboot, the VE Database dashboard returned a 502 Bad Gateway error.
+- **Root Cause**: The `ve-dashboard` process was previously restarted via PM2 using a bash interpreter (Phase 28). However, the updated PM2 process list was never saved using `pm2 save`. Consequently, upon server reboot, PM2 restored only the processes saved in its dump, omitting `ve-dashboard` entirely.
+- **Fix applied**: 
+  1. Connected to the AWS Lightsail instance using SSH and the `LightsailDefaultKey-ap-northeast-2.pem` key.
+  2. Executed the bash-wrapped PM2 start command to correctly launch Gunicorn: 
+     `pm2 start bash --name 've-dashboard' -- -c '/home/ubuntu/ve_database/venv/bin/gunicorn -w 1 --threads 4 -b 127.0.0.1:5003 --timeout 120 --chdir /home/ubuntu/ve_database src.app:app'`
+  3. Ran `pm2 save` immediately to update the PM2 dump file (`/home/ubuntu/.pm2/dump.pm2`) and ensure the process persists across future reboots.
+
+### Phase 32: Automating YouTube Downloader Maintenance (Cookie Sync)
+**Issue: YouTube Grabber Service Cookie Expiration**
+- **Symptoms**: YouTube anti-bot mechanisms cause session cookies to expire, leading to download failures on the remote AWS Lightsail environment.
+- **Maintenance Strategy**:
+  1. Implemented `auto_sync_cookies.bat` locally to streamline the extraction of updated YouTube session cookies from the local environment.
+  2. The script uses secure `scp` (with proper path escaping) to upload the refreshed cookies directly to the AWS Lightsail `youtube_graber` directory.
+  3. This ensures a one-click recovery process from YouTube anti-bot expirations and minimizes maintenance downtime without requiring manual SSH intervention.
+
+### Phase 33: System-wide 502 Error Recovery & Prevention Guide (2026-05-14)
+**Issue: Server Reboot Causing 502 Bad Gateway on Multiple Pages**
+- **Symptoms**: After an unexpected AWS Lightsail instance reboot (e.g., due to OOM during Next.js builds), multiple services including `safetron-dashboard`, `kict_post_evaluation`, and `ve-dashboard` failed to automatically restart, leading to a cascade of 502 Bad Gateway errors.
+- **Root Cause**: The background daemons (PM2 and Docker) were not properly configured with auto-restart policies for these specific services. PM2 lacked the `pm2 save` registry update, and Docker Compose lacked the `restart: always` configuration.
+- **System-wide Maintenance & Recovery Guide**:
+  
+  **A. For PM2-managed Services (e.g., Next.js Frontend, Python Apps)**
+  1. SSH into the AWS Lightsail server.
+  2. Run `pm2 status` to check if the specific service is stopped, errored, or missing from the list.
+  3. If missing or stopped, start the service using its designated command (e.g., `pm2 start <기존명령어>` or `pm2 restart <이름>`).
+  4. **[CRITICAL PREVENTION STEP]**: Immediately run **`pm2 save`**. This synchronizes the current running process list to the PM2 dump file, ensuring it survives any future server reboots.
+
+  **B. For Docker Compose-managed Services**
+  1. SSH into the server and navigate to the project directory containing the `docker-compose.yml` file.
+  2. Open the `docker-compose.yml` file and verify that the `restart: always` policy is present under each service definition.
+     ```yaml
+     services:
+       frontend:
+         restart: always  # <-- This line is mandatory for auto-recovery
+         build: ...
+     ```
+  3. If the option is missing, add it, then execute `sudo docker compose down` followed by `sudo docker compose up -d` to apply the changes. The Docker daemon will now automatically manage the container's lifecycle across reboots.
+
+---
+
+### Phase 34: Gemini API Key 보안 리팩토링 & UI 내비게이션 개선 (2026-05-19)
+
+> **작업일**: 2026-05-19
+> **목표**: (1) 하드코딩된 Gemini API Key를 사용자 입력 방식으로 전환하여 보안 강화, (2) 히어로 페이지 내비게이션 버튼 추가, (3) 유출된 API Key 교체
+
+#### 34.1 문제 진단
+
+| 항목 | 상태 | 영향 |
+|---|---|---|
+| API Key 노출 | **심각** | GitHub 커밋 이력 또는 `.env` 파일에 Gemini API Key가 유출되어 Google에서 키 비활성화 처리 |
+| FAST Diagram 오류 | **발생** | `403 PERMISSION_DENIED: Your API key was reported as leaked` 에러로 AI 기능 전면 중단 |
+| 대시보드 내비게이션 | **불편** | 대시보드에서 히어로 랜딩 페이지로 돌아가는 경로 부재 |
+
+#### 34.2 해결 1 — 사용자 입력형 Gemini API Key UI
+
+**프론트엔드 (`src/templates/index.html`)**
+- VE Round Table (07번 탭) 입력 패널에 `type="password"` 형태의 **Gemini API Key 입력 필드** 추가
+- 라벨: "Gemini API Key", placeholder: "API Key를 입력하세요"
+- 입력값은 브라우저 메모리에만 존재하며, 서버 저장/로깅 없음
+
+**프론트엔드 로직 (`src/static/js/ve-agent.js`)**
+- `startBtn` 이벤트 리스너에서 `#gemini-api-key` 필드의 값을 캡처
+- POST 요청 payload에 `api_key` 파라미터로 포함하여 전송
+- JSON 모드와 FormData(파일 업로드) 모드 모두 대응
+
+**백엔드 API (`src/app.py`)**
+- `POST /api/ve/roundtable` — 요청 body에서 `api_key` 추출, `start_roundtable_async()`에 전달
+- `POST /api/ve/fast-diagram` — 동일하게 `api_key` 추출, FAST Agent에 전달
+- **Fallback 로직**: 사용자 입력 키가 없으면 서버 `.env`의 `GEMINI_API_KEY` 사용
+
+**에이전트 로직 (`src/agents/roundtable.py`)**
+- `RoundtableSession` dataclass에 `api_key: str = ""` 필드 추가
+- `_call_gemini()` 함수가 세션별 키를 우선 사용, 없으면 환경변수 fallback
+- 모든 Agent 호출(VE Leader, Domain Expert, Data Analyst, Idea Developer, FAST, 종합정리)에서 동일 키 사용
+
+#### 34.3 해결 2 — 히어로 페이지 내비게이션 버튼
+
+**사이드바 하단 (`index.html` sidebar-footer)**
+- Navy 배경의 "히어로페이지(Home)" 버튼 추가
+- SVG 집 아이콘 + 텍스트, `border-radius: 6px`, hover 시 밝기 전환
+- **링크**: `href="/"` — Flask `@app.route("/")` — `landing.html` (히어로 페이지)
+
+**시행착오: 잘못된 링크 대상**
+- **1차 구현**: `href="https://ninetynine99.co.kr"` — 회사 홈페이지(솔루션 페이지)로 이동하는 버그
+- **원인**: VE 대시보드의 자체 히어로 페이지(`/` — `landing.html`)와 회사 홈페이지(`ninetynine99.co.kr`)를 혼동
+- **수정**: `href="/"` 로 변경하여 VE 대시보드의 자체 랜딩 페이지로 정확히 이동하도록 수정
+
+#### 34.4 해결 3 — 서버 API Key 교체
+
+**유출된 키 비활성화 확인**
+- 기존 키(`AIzaSyDJJ1a2EgxT1p7cHjVfw_ZSEtZRKmmVwxE`)가 Google에 의해 "leaked" 처리됨
+- FAST Diagram 실행 시 `403 PERMISSION_DENIED` 에러 발생
+
+**서버 `.env` 교체 (SSH 원격 실행)**
+- 로컬 PC에서 SSH(`LightsailDefaultKey-ap-northeast-2.pem`)로 서버 접속 후 `sed` 명령으로 키 교체
+- `pm2 restart ve-dashboard --update-env`로 환경변수 반영 재시작
+
+**보안 원칙 준수**
+- 새 API Key는 **서버 `.env` 파일에만 존재** (Git 추적 대상 아님)
+- `.gitignore`에 `.env`, `.env.*`, `*.env` 패턴 등록 확인 완료
+- 커밋 이력에 API Key 평문 노출 **없음**
+
+#### 34.5 배포 스크립트 수정 (`deploy.sh`)
+
+**문제**: `deploy.sh` 내 PM2 프로세스 이름이 `ve_dashboard` (언더바)로 되어 있어, 실제 등록된 이름 `ve-dashboard` (하이픈)과 불일치하여 `[PM2][ERROR] Process or Namespace ve_dashboard not found` 에러 발생
+
+**수정**: `ve_dashboard` — `ve-dashboard`
+
+#### 34.6 SSH 접속 키 발견 및 원격 배포 자동화
+
+**시행착오: SSH Permission Denied**
+- 최초 시도 시 `ubuntu@54.180.208.68: Permission denied (publickey)` 발생
+- 원인: `~/.ssh/config`에 Lightsail 서버 설정이 없고, `id_rsa`로는 인증 불가
+
+**해결: PEM 키 파일 탐색**
+- 시스템 전체 검색으로 `C:\Users\cho\Desktop\Temp\LightsailDefaultKey-ap-northeast-2.pem` 발견
+- 이후 모든 서버 작업을 해당 키로 SSH 원격 실행
+- 향후 참조: `ssh -i "C:\Users\cho\Desktop\Temp\LightsailDefaultKey-ap-northeast-2.pem" ubuntu@54.180.208.68`
+
+#### 34.7 배포 시행착오: Lightsail 브라우저 터미널 클립보드
+
+**문제**: AWS Lightsail 웹 터미널에서 `Ctrl+V` 붙여넣기 시 Bracketed Paste Mode 특수문자(`^[[200~` ... `~`)가 명령어에 삽입되어 실행 실패
+**해결**: Lightsail 브라우저 터미널에서는 복사/붙여넣기 대신 **직접 타이핑**하거나, 우측 하단 **클립보드 아이콘**을 통해 붙여넣기 수행
+
+#### 34.8 파일 변경 요약
+
+| 파일 | 변경 내용 | LOC |
+|---|---|---|
+| `src/templates/index.html` | API Key 입력 필드 + 히어로페이지 버튼 추가 | +11줄 |
+| `src/static/js/ve-agent.js` | API Key 캡처 및 요청 payload 포함 로직 | +8줄 |
+| `src/app.py` | `/roundtable`, `/fast-diagram` 엔드포인트에 동적 API Key 파라미터 수용 | +10줄 |
+| `src/agents/roundtable.py` | `RoundtableSession`에 `api_key` 필드, `_call_gemini` 키 우선순위 | +15줄 |
+| `deploy.sh` | PM2 프로세스 이름 오타 수정 (`ve_dashboard` — `ve-dashboard`) | 1줄 |
+| 서버 `.env` | 유출된 Gemini API Key — 신규 키로 교체 | 1줄 (서버 only) |
+
+#### 34.9 Git 커밋 이력
+
+| 커밋 해시 | 메시지 |
+|---|---|
+| `9717856` | `feat: Add Gemini API Key input UI and Hero Page button` |
+| `77037fb` | `fix: Correct pm2 process name typo in deploy script` |
+| `6649ce0` | `fix: Update hero button link to root path` |

@@ -562,7 +562,7 @@ def serve_abs_image():
         idx = normalized.find(marker)
         if idx >= 0:
             relative = normalized[idx:]  # e.g. "data/images/대안_02/대안_02_original_diagram.jpeg"
-            server_path = Path('/home/ubuntu/ve_database') / relative
+            server_path = BASE_DIR / relative
             if server_path.exists():
                 return send_from_directory(str(server_path.parent), server_path.name)
 
@@ -1055,6 +1055,21 @@ flowchart LR
         return jsonify({"mermaid_code": code})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/debug/paths")
+def debug_paths():
+    """임시 디버깅: 컨테이너 내부 파일 경로 확인."""
+    kg_stats_path = KG_DIR / "kg_stats.json"
+    graphml_path = KG_DIR / "ve_knowledge_graph.graphml"
+    return jsonify({
+        "BASE_DIR": str(BASE_DIR),
+        "KG_DIR": str(KG_DIR),
+        "kg_stats_exists": kg_stats_path.exists(),
+        "graphml_exists": graphml_path.exists(),
+        "kg_dir_contents": [f.name for f in KG_DIR.iterdir()] if KG_DIR.exists() else "DIR_NOT_FOUND",
+        "data_dir_contents": [f.name for f in (BASE_DIR / "data").iterdir()] if (BASE_DIR / "data").exists() else "DIR_NOT_FOUND",
+    })
 
 
 if __name__ == "__main__":

@@ -3,6 +3,14 @@
 .env.*
 *.env
 
+# ── GCP / Firebase Credentials ──
+*.json
+.agent/*.json
+!package.json
+!package-lock.json
+!firestore.indexes.json
+!firebase.json
+
 # ── Agent sensitive ──
 .agent/.rule.md
 
