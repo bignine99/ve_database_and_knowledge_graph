@@ -44,5 +44,20 @@ data/db/
 data/pages/
 # NOTE: data/kg/ is tracked — contains KG graphml required for service
 
+# ── Large archives ──
+*.zip
+
+# ── Test / utility scripts (root level) ──
+test_*.py
+test_*.png
+query_*.py
+update_docker.py
+extract_images_*.py
+test_vis.js
+old_dashboard.js
+
+# ── Firebase local cache ──
+.firebase/
+
 # ── Scratch (temp files) ──
 scratch/

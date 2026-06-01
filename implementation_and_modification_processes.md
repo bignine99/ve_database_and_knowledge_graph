@@ -1201,7 +1201,7 @@ Step 6: 🎩 VE Leader       — 종합 정리 + 다음 단계 제안
 #### 34.4 해결 3 — 서버 API Key 교체
 
 **유출된 키 비활성화 확인**
-- 기존 키(`AIzaSyDJJ1a2EgxT1p7cHjVfw_ZSEtZRKmmVwxE`)가 Google에 의해 "leaked" 처리됨
+- 기존 키(`[REDACTED — Google에 의해 leaked 처리됨]`)가 Google에 의해 "leaked" 처리됨
 - FAST Diagram 실행 시 `403 PERMISSION_DENIED` 에러 발생
 
 **서버 `.env` 교체 (SSH 원격 실행)**

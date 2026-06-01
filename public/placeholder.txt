@@ -1,0 +1,2 @@
+This directory must contain at least one file for Firebase Hosting deployment.
+Static files here are served before rewrites, so do NOT place index.html.
