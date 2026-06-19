@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "ninetynine-hub-497811"
+  },
+  "targets": {
+    "ninetynine-hub-497811": {
+      "hosting": {
+        "ve-site": [
+          "ve-ninetynine99"
+        ]
+      }
+    }
   }
 }

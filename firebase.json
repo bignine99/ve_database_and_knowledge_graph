@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "target": "ve-site",
     "public": "public",
     "ignore": [
       "firebase.json",
