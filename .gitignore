@@ -61,3 +61,6 @@ old_dashboard.js
 
 # ── Scratch (temp files) ──
 scratch/
+
+# 2026-07-31: legacy agent folder - never track
+.agent/
